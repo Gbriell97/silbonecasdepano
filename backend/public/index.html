@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no" />
+<title>Cardápio Digital</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Karla:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="brand">
+      <span class="brand-mark">🍴</span>
+      <h1 id="nomeLoja">Carregando...</h1>
+    </div>
+    <button class="cart-toggle" id="cartToggle" aria-label="Abrir carrinho">
+      <span class="cart-icon">🧾</span>
+      <span class="cart-count" id="cartCount">0</span>
+    </button>
+  </div>
+  <nav class="cat-nav" id="catNav"></nav>
+</header>
+
+<main class="menu" id="menu">
+  <p class="loading">Carregando cardápio…</p>
+</main>
+
+<!-- Comanda / Carrinho -->
+<aside class="ticket" id="ticket" aria-hidden="true">
+  <div class="ticket-backdrop" id="ticketBackdrop"></div>
+  <div class="ticket-panel">
+    <div class="ticket-head">
+      <span>COMANDA</span>
+      <button id="closeTicket" class="ticket-close" aria-label="Fechar">✕</button>
+    </div>
+
+    <div class="ticket-items" id="ticketItems">
+      <p class="ticket-empty">Sua comanda está vazia.<br>Adicione itens do cardápio.</p>
+    </div>
+
+    <div class="ticket-total-row">
+      <span>TOTAL</span>
+      <span id="ticketTotal">R$ 0,00</span>
+    </div>
+
+    <form id="checkoutForm" class="checkout-form">
+      <label>
+        Nome
+        <input type="text" id="clienteNome" required placeholder="Seu nome" />
+      </label>
+      <label>
+        WhatsApp
+        <input type="tel" id="clienteTelefone" required placeholder="(11) 99999-9999" />
+      </label>
+      <label>
+        Endereço para entrega (opcional)
+        <input type="text" id="clienteEndereco" placeholder="Rua, número, bairro" />
+      </label>
+      <label>
+        Forma de pagamento
+        <select id="formaPagamento">
+          <option value="Dinheiro">Dinheiro na entrega</option>
+          <option value="Cartão na entrega">Cartão na entrega</option>
+          <option value="Pix">Pix</option>
+          <option value="Pagamento online">Pagamento online</option>
+        </select>
+      </label>
+
+      <button type="submit" class="btn-confirm" id="btnConfirm">Enviar pedido pelo WhatsApp</button>
+    </form>
+
+    <p class="ticket-footnote">Ao confirmar, seu pedido será enviado direto no WhatsApp da loja.</p>
+  </div>
+</aside>
+
+<button class="floating-cart" id="floatingCart">
+  <span id="floatingCount">0</span> itens · <span id="floatingTotal">R$ 0,00</span>
+</button>
+
+<script src="app.js"></script>
+</body>
+</html>

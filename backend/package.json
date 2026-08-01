@@ -1,0 +1,17 @@
+{
+  "name": "cardapio-site",
+  "version": "1.0.0",
+  "description": "Site de cardapio digital com carrinho, checkout via WhatsApp e integracao de pagamento (Pix/Mercado Pago)",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}
