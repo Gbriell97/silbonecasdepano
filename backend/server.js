@@ -13,6 +13,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
+// Permite acessar /admin (sem .html) diretamente
+app.get("/admin", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
+});
+
 // Config do estabelecimento (troque no arquivo .env)
 const CONFIG = {
   nomeLoja: process.env.NOME_LOJA || "Sabor Express",
