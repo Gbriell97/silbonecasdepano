@@ -2,6 +2,8 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
+const multer = require("multer");
 const db = require("./db");
 
 const app = express();
@@ -17,7 +19,32 @@ const CONFIG = {
   whatsapp: process.env.WHATSAPP_NUMERO || "5511999999999", // formato: 55 + DDD + numero
   chavePix: process.env.CHAVE_PIX || "",
   mpAccessToken: process.env.MP_ACCESS_TOKEN || "",
+  adminSenha: process.env.ADMIN_SENHA || "admin123",
 };
+
+// Pasta onde as fotos enviadas pelo admin são salvas
+const imgDir = path.join(__dirname, "public", "img");
+if (!fs.existsSync(imgDir)) fs.mkdirSync(imgDir, { recursive: true });
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, imgDir),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname) || ".jpg";
+      cb(null, `produto-${req.params.id}-${Date.now()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+});
+
+// Protege todas as rotas /api/admin/* com senha (enviada no header x-admin-senha)
+function checarSenhaAdmin(req, res, next) {
+  const senha = req.headers["x-admin-senha"];
+  if (senha !== CONFIG.adminSenha) {
+    return res.status(401).json({ erro: "Senha incorreta." });
+  }
+  next();
+}
 
 // ---------- Rotas públicas ----------
 
@@ -125,10 +152,107 @@ app.post("/api/pagamento/criar-preferencia", async (req, res) => {
   }
 });
 
-// ---------- Admin simples (listar pedidos) ----------
-app.get("/api/admin/pedidos", (req, res) => {
+// ---------- Área administrativa (protegida por senha) ----------
+
+// Login: só confirma se a senha está correta
+app.post("/api/admin/login", (req, res) => {
+  const { senha } = req.body;
+  if (senha !== CONFIG.adminSenha) {
+    return res.status(401).json({ erro: "Senha incorreta." });
+  }
+  res.json({ ok: true });
+});
+
+app.get("/api/admin/pedidos", checarSenhaAdmin, (req, res) => {
   const pedidos = db.prepare("SELECT * FROM pedidos ORDER BY id DESC").all();
   res.json(pedidos);
+});
+
+// Cardápio completo (inclui itens indisponíveis, para o admin poder reativar)
+app.get("/api/admin/cardapio", checarSenhaAdmin, (req, res) => {
+  const categorias = db.prepare("SELECT * FROM categorias ORDER BY ordem").all();
+  const produtos = db.prepare("SELECT * FROM produtos").all();
+  const resultado = categorias.map((cat) => ({
+    ...cat,
+    produtos: produtos.filter((p) => p.categoria_id === cat.id),
+  }));
+  res.json(resultado);
+});
+
+// --- Categorias ---
+app.post("/api/admin/categorias", checarSenhaAdmin, (req, res) => {
+  const { nome } = req.body;
+  if (!nome) return res.status(400).json({ erro: "Nome da categoria é obrigatório." });
+  const ordemMax = db.prepare("SELECT MAX(ordem) AS m FROM categorias").get().m || 0;
+  const info = db.prepare("INSERT INTO categorias (nome, ordem) VALUES (?, ?)").run(nome, ordemMax + 1);
+  res.json({ id: info.lastInsertRowid, nome, ordem: ordemMax + 1 });
+});
+
+app.put("/api/admin/categorias/:id", checarSenhaAdmin, (req, res) => {
+  const { nome } = req.body;
+  db.prepare("UPDATE categorias SET nome = ? WHERE id = ?").run(nome, req.params.id);
+  res.json({ ok: true });
+});
+
+app.delete("/api/admin/categorias/:id", checarSenhaAdmin, (req, res) => {
+  const temProdutos = db.prepare("SELECT COUNT(*) AS c FROM produtos WHERE categoria_id = ?").get(req.params.id).c;
+  if (temProdutos > 0) {
+    return res.status(400).json({ erro: "Remova ou mova os produtos dessa categoria antes de excluí-la." });
+  }
+  db.prepare("DELETE FROM categorias WHERE id = ?").run(req.params.id);
+  res.json({ ok: true });
+});
+
+// --- Produtos ---
+app.post("/api/admin/produtos", checarSenhaAdmin, (req, res) => {
+  const { categoria_id, nome, descricao, preco } = req.body;
+  if (!categoria_id || !nome || preco === undefined) {
+    return res.status(400).json({ erro: "Categoria, nome e preço são obrigatórios." });
+  }
+  const info = db
+    .prepare("INSERT INTO produtos (categoria_id, nome, descricao, preco, disponivel) VALUES (?, ?, ?, ?, 1)")
+    .run(categoria_id, nome, descricao || "", preco);
+  res.json({ id: info.lastInsertRowid });
+});
+
+app.put("/api/admin/produtos/:id", checarSenhaAdmin, (req, res) => {
+  const { categoria_id, nome, descricao, preco, disponivel } = req.body;
+  const atual = db.prepare("SELECT * FROM produtos WHERE id = ?").get(req.params.id);
+  if (!atual) return res.status(404).json({ erro: "Produto não encontrado." });
+
+  db.prepare(
+    `UPDATE produtos SET categoria_id = ?, nome = ?, descricao = ?, preco = ?, disponivel = ? WHERE id = ?`
+  ).run(
+    categoria_id ?? atual.categoria_id,
+    nome ?? atual.nome,
+    descricao ?? atual.descricao,
+    preco ?? atual.preco,
+    disponivel !== undefined ? (disponivel ? 1 : 0) : atual.disponivel,
+    req.params.id
+  );
+  res.json({ ok: true });
+});
+
+app.delete("/api/admin/produtos/:id", checarSenhaAdmin, (req, res) => {
+  db.prepare("DELETE FROM produtos WHERE id = ?").run(req.params.id);
+  res.json({ ok: true });
+});
+
+// Upload de foto do produto
+app.post("/api/admin/produtos/:id/imagem", checarSenhaAdmin, upload.single("imagem"), (req, res) => {
+  if (!req.file) return res.status(400).json({ erro: "Nenhum arquivo enviado." });
+
+  const produto = db.prepare("SELECT * FROM produtos WHERE id = ?").get(req.params.id);
+  if (!produto) return res.status(404).json({ erro: "Produto não encontrado." });
+
+  // Remove a foto antiga, se existir e for um upload anterior
+  if (produto.imagem) {
+    const antiga = path.join(imgDir, produto.imagem);
+    if (fs.existsSync(antiga)) fs.unlinkSync(antiga);
+  }
+
+  db.prepare("UPDATE produtos SET imagem = ? WHERE id = ?").run(req.file.filename, req.params.id);
+  res.json({ ok: true, imagem: req.file.filename });
 });
 
 app.listen(PORT, () => {

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Administração do Cardápio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Karla:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="admin.css" />
+</head>
+<body class="admin-body">
+
+<!-- Tela de login -->
+<div class="login-screen" id="loginScreen">
+  <form class="login-box" id="loginForm">
+    <h1>Área administrativa</h1>
+    <p>Digite a senha para editar o cardápio</p>
+    <input type="password" id="senhaInput" placeholder="Senha" required />
+    <button type="submit">Entrar</button>
+    <p class="login-erro" id="loginErro"></p>
+  </form>
+</div>
+
+<!-- Painel admin -->
+<div class="admin-panel" id="adminPanel" hidden>
+  <header class="admin-header">
+    <h1>Editar cardápio</h1>
+    <div class="admin-header-actions">
+      <a href="/" class="btn-link" target="_blank">Ver site</a>
+      <button id="btnLogout" class="btn-link">Sair</button>
+    </div>
+  </header>
+
+  <div class="admin-content" id="adminContent">
+    <p class="loading">Carregando...</p>
+  </div>
+
+  <button id="btnNovaCategoria" class="btn-nova-categoria">+ Nova categoria</button>
+
+  <section class="pedidos-section">
+    <h2>Últimos pedidos</h2>
+    <div id="listaPedidos"><p class="loading">Carregando pedidos...</p></div>
+  </section>
+</div>
+
+<!-- Modal editar/criar produto -->
+<div class="modal" id="modalProduto" hidden>
+  <div class="modal-backdrop" id="modalBackdrop"></div>
+  <form class="modal-box" id="formProduto">
+    <h2 id="modalTitulo">Editar item</h2>
+
+    <label>Nome
+      <input type="text" id="campoNome" required />
+    </label>
+    <label>Descrição
+      <textarea id="campoDescricao" rows="2"></textarea>
+    </label>
+    <label>Preço (R$)
+      <input type="number" id="campoPreco" step="0.01" min="0" required />
+    </label>
+    <label>Categoria
+      <select id="campoCategoria" required></select>
+    </label>
+    <label class="checkbox-label">
+      <input type="checkbox" id="campoDisponivel" checked />
+      Disponível no cardápio
+    </label>
+
+    <label>Foto
+      <input type="file" id="campoFoto" accept="image/*" />
+    </label>
+    <img id="previewFoto" class="preview-foto" hidden />
+
+    <div class="modal-actions">
+      <button type="button" id="btnCancelar" class="btn-secundario">Cancelar</button>
+      <button type="submit" class="btn-primario">Salvar</button>
+    </div>
+  </form>
+</div>
+
+<script src="admin.js"></script>
+</body>
+</html>

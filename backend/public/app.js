@@ -85,7 +85,10 @@ function productCardHTML(produto, nomeCategoria) {
 
   return `
     <div class="product-card">
-      <div class="product-thumb">${emojiFor(nomeCategoria)}</div>
+      <div class="product-thumb">
+        <span class="thumb-emoji">${emojiFor(nomeCategoria)}</span>
+        ${produto.imagem ? `<img class="thumb-img" src="/img/${produto.imagem}" onerror="this.remove()" />` : ""}
+      </div>
       <div class="product-info">
         <h3>${produto.nome}</h3>
         <p>${produto.descricao || ""}</p>

@@ -151,6 +151,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 400; letter-spacing: 0.01
 }
 
 .product-thumb {
+  position: relative;
   width: 64px;
   height: 64px;
   border-radius: 10px;
@@ -160,6 +161,15 @@ h1, h2, h3 { font-family: var(--display); font-weight: 400; letter-spacing: 0.01
   justify-content: center;
   font-size: 1.6rem;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.thumb-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .product-info { flex: 1; min-width: 0; }
