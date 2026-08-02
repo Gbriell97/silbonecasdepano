@@ -42,6 +42,17 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
 
+const uploadLoja = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, imgDir),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname) || ".jpg";
+      cb(null, `loja-${req.params.campo}-${Date.now()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+});
+
 // Protege todas as rotas /api/admin/* com senha (enviada no header x-admin-senha)
 function checarSenhaAdmin(req, res, next) {
   const senha = req.headers["x-admin-senha"];
@@ -51,10 +62,58 @@ function checarSenhaAdmin(req, res, next) {
   next();
 }
 
+// Calcula se a loja está aberta agora, com base no horário configurado (fuso de Brasília)
+function calcularAberto(configLoja) {
+  if (configLoja.sempre_aberto) return true;
+
+  let horarios;
+  try {
+    horarios = JSON.parse(configLoja.horarios_json || "{}");
+  } catch {
+    return true;
+  }
+
+  const agoraSP = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  const dias = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
+  const diaHoje = horarios[dias[agoraSP.getDay()]];
+
+  if (!diaHoje || !diaHoje.aberto) return false;
+
+  const minutosAgora = agoraSP.getHours() * 60 + agoraSP.getMinutes();
+  const [hi, mi] = (diaHoje.inicio || "00:00").split(":").map(Number);
+  const [hf, mf] = (diaHoje.fim || "23:59").split(":").map(Number);
+  const minutosInicio = hi * 60 + mi;
+  const minutosFim = hf * 60 + mf;
+
+  if (minutosFim > minutosInicio) {
+    return minutosAgora >= minutosInicio && minutosAgora < minutosFim;
+  }
+  // horário que passa da meia-noite (ex: 18:00 às 02:00)
+  return minutosAgora >= minutosInicio || minutosAgora < minutosFim;
+}
+
 // ---------- Rotas públicas ----------
 
-app.get("/api/config", (req, res) => {
-  res.json({ nomeLoja: CONFIG.nomeLoja, aceitaPix: !!CONFIG.chavePix });
+app.get("/api/loja", (req, res) => {
+  const configLoja = db.prepare("SELECT * FROM loja_config WHERE id = 1").get();
+  let horarios = {};
+  try {
+    horarios = JSON.parse(configLoja.horarios_json || "{}");
+  } catch {}
+
+  res.json({
+    nome: configLoja.nome,
+    tagline: configLoja.tagline,
+    logo: configLoja.logo,
+    capas: [configLoja.capa1, configLoja.capa2, configLoja.capa3].filter(Boolean),
+    corPrimaria: configLoja.cor_primaria,
+    endereco: configLoja.endereco,
+    textoEntrega: configLoja.texto_entrega,
+    aberto: calcularAberto(configLoja),
+    horarios,
+    whatsapp: CONFIG.whatsapp,
+    aceitaPix: !!CONFIG.chavePix,
+  });
 });
 
 app.get("/api/cardapio", (req, res) => {
@@ -78,6 +137,7 @@ app.post("/api/pedidos", (req, res) => {
   }
 
   const total = itens.reduce((soma, item) => soma + item.preco * item.quantidade, 0);
+  const nomeLoja = db.prepare("SELECT nome FROM loja_config WHERE id = 1").get()?.nome || CONFIG.nomeLoja;
 
   const stmt = db.prepare(`
     INSERT INTO pedidos (cliente_nome, cliente_telefone, endereco, forma_pagamento, total, itens_json)
@@ -98,7 +158,7 @@ app.post("/api/pedidos", (req, res) => {
     .join("\n");
 
   const mensagem =
-    `*Novo pedido #${info.lastInsertRowid} - ${CONFIG.nomeLoja}*\n\n` +
+    `*Novo pedido #${info.lastInsertRowid} - ${nomeLoja}*\n\n` +
     `${linhas}\n\n` +
     `*Total: R$ ${total.toFixed(2)}*\n` +
     `Forma de pagamento: ${forma_pagamento}\n` +
@@ -257,6 +317,54 @@ app.post("/api/admin/produtos/:id/imagem", checarSenhaAdmin, upload.single("imag
   }
 
   db.prepare("UPDATE produtos SET imagem = ? WHERE id = ?").run(req.file.filename, req.params.id);
+  res.json({ ok: true, imagem: req.file.filename });
+});
+
+// --- Configuração da loja (capa, logo, cores, horário) ---
+
+app.get("/api/admin/loja", checarSenhaAdmin, (req, res) => {
+  const configLoja = db.prepare("SELECT * FROM loja_config WHERE id = 1").get();
+  res.json(configLoja);
+});
+
+app.put("/api/admin/loja", checarSenhaAdmin, (req, res) => {
+  const { nome, tagline, cor_primaria, endereco, texto_entrega, sempre_aberto, horarios } = req.body;
+  const atual = db.prepare("SELECT * FROM loja_config WHERE id = 1").get();
+
+  db.prepare(
+    `UPDATE loja_config SET nome = ?, tagline = ?, cor_primaria = ?, endereco = ?, texto_entrega = ?, sempre_aberto = ?, horarios_json = ? WHERE id = 1`
+  ).run(
+    nome ?? atual.nome,
+    tagline ?? atual.tagline,
+    cor_primaria ?? atual.cor_primaria,
+    endereco ?? atual.endereco,
+    texto_entrega ?? atual.texto_entrega,
+    sempre_aberto !== undefined ? (sempre_aberto ? 1 : 0) : atual.sempre_aberto,
+    horarios ? JSON.stringify(horarios) : atual.horarios_json
+  );
+  res.json({ ok: true });
+});
+
+// Upload de logo ou capa (campo: "logo", "capa1", "capa2" ou "capa3")
+app.post("/api/admin/loja/imagem/:campo", checarSenhaAdmin, (req, res, next) => {
+  const camposValidos = ["logo", "capa1", "capa2", "capa3"];
+  if (!camposValidos.includes(req.params.campo)) {
+    return res.status(400).json({ erro: "Campo de imagem inválido." });
+  }
+  next();
+}, uploadLoja.single("imagem"), (req, res) => {
+  if (!req.file) return res.status(400).json({ erro: "Nenhum arquivo enviado." });
+
+  const campo = req.params.campo;
+  const atual = db.prepare("SELECT * FROM loja_config WHERE id = 1").get();
+
+  // Remove a imagem antiga desse campo, se existir
+  if (atual[campo]) {
+    const antiga = path.join(imgDir, atual[campo]);
+    if (fs.existsSync(antiga)) fs.unlinkSync(antiga);
+  }
+
+  db.prepare(`UPDATE loja_config SET ${campo} = ? WHERE id = 1`).run(req.file.filename);
   res.json({ ok: true, imagem: req.file.filename });
 });
 

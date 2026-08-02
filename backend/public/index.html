@@ -6,24 +6,51 @@
 <title>Cardápio Digital</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Karla:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Karla:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-<header class="header">
-  <div class="header-inner">
-    <div class="brand">
-      <span class="brand-mark">🍴</span>
-      <h1 id="nomeLoja">Carregando...</h1>
-    </div>
-    <button class="cart-toggle" id="cartToggle" aria-label="Abrir carrinho">
-      <span class="cart-icon">🧾</span>
-      <span class="cart-count" id="cartCount">0</span>
-    </button>
+<!-- Capa com fotos -->
+<div class="cover" id="cover"></div>
+
+<!-- Cartão de identidade da loja -->
+<div class="store-card">
+  <img class="store-logo" id="storeLogo" src="" alt="" hidden />
+  <div class="store-logo-fallback" id="storeLogoFallback">🍴</div>
+  <div class="store-info">
+    <h1 id="storeName">Carregando...</h1>
+    <p id="storeTagline"></p>
   </div>
-  <nav class="cat-nav" id="catNav"></nav>
-</header>
+  <div class="store-status">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText">—</span>
+    <span class="store-delivery" id="storeDelivery"></span>
+  </div>
+</div>
+
+<!-- Ações rápidas -->
+<div class="quick-actions">
+  <button class="quick-btn" id="btnRepetir">
+    <span class="quick-icon">🔁</span> Peça de novo
+  </button>
+  <button class="quick-btn" id="btnWhats">
+    <span class="quick-icon">💬</span> Fale conosco
+  </button>
+  <button class="quick-btn cart" id="cartToggle">
+    <span class="quick-icon">🧾</span> Carrinho
+    <span class="cart-count" id="cartCount" hidden>0</span>
+  </button>
+</div>
+
+<!-- Busca -->
+<div class="search-bar">
+  <span class="search-icon">🔎</span>
+  <input type="text" id="searchInput" placeholder="Pesquisar produto..." />
+</div>
+
+<!-- Categorias com ícones -->
+<nav class="cat-grid" id="catNav"></nav>
 
 <main class="menu" id="menu">
   <p class="loading">Carregando cardápio…</p>
@@ -77,9 +104,32 @@
   </div>
 </aside>
 
-<button class="floating-cart" id="floatingCart">
-  <span id="floatingCount">0</span> itens · <span id="floatingTotal">R$ 0,00</span>
-</button>
+<!-- Modal de informações -->
+<div class="modal" id="modalInfo" hidden>
+  <div class="modal-backdrop" id="infoBackdrop"></div>
+  <div class="modal-box">
+    <h2>Informações</h2>
+    <p id="infoTagline"></p>
+    <p id="infoEndereco"></p>
+    <p id="infoEntrega"></p>
+    <h3>Horário de funcionamento</h3>
+    <div id="infoHorarios"></div>
+    <button class="btn-confirm" id="btnFecharInfo">Fechar</button>
+  </div>
+</div>
+
+<!-- Barra de navegação inferior -->
+<nav class="bottom-nav">
+  <button class="bottom-item active" data-nav="catalogo">
+    <span>📖</span> Catálogo
+  </button>
+  <button class="bottom-item" data-nav="carrinho">
+    <span>🧾</span> Carrinho
+  </button>
+  <button class="bottom-item" data-nav="info">
+    <span>ℹ️</span> Info
+  </button>
+</nav>
 
 <script src="app.js"></script>
 </body>

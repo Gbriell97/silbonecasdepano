@@ -139,6 +139,108 @@
 .pedidos-section { border-top: 1px solid var(--card-border); padding-top: 16px; }
 .pedidos-section h2 { color: var(--mustard); font-size: 1.1rem; text-transform: uppercase; }
 
+/* ---- Seção de aparência da loja ---- */
+.loja-section {
+  border-top: 1px solid var(--card-border);
+  border-bottom: 1px solid var(--card-border);
+  padding: 16px 0 24px;
+  margin-bottom: 24px;
+}
+.loja-section h2 { color: var(--mustard); font-size: 1.1rem; text-transform: uppercase; margin: 0 0 14px; }
+
+.loja-field-group { margin-bottom: 18px; }
+.loja-field-group > label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.upload-row { display: flex; align-items: center; gap: 12px; }
+
+.preview-circular {
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg-alt);
+  border: 1.5px solid var(--card-border);
+  flex-shrink: 0;
+}
+.preview-placeholder { display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+
+.capas-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.capa-slot { display: flex; flex-direction: column; gap: 6px; }
+.preview-capa {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--bg-alt);
+  border: 1.5px solid var(--card-border);
+}
+.capa-slot input[type="file"] { font-size: 0.65rem; color: var(--muted); }
+
+.loja-form { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
+.loja-form label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.loja-form input[type="text"] {
+  font-family: var(--body);
+  font-size: 0.9rem;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1.5px solid var(--card-border);
+  background: var(--bg-alt);
+  color: var(--cream);
+}
+.loja-form input[type="color"] {
+  width: 60px; height: 36px;
+  border: 1.5px solid var(--card-border);
+  border-radius: 8px;
+  background: none;
+  padding: 2px;
+}
+.loja-form .checkbox-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+}
+.loja-form .checkbox-label input { width: auto; }
+
+.horarios-block { border-top: 1px dashed var(--card-border); padding-top: 12px; }
+.horarios-title { margin-bottom: 8px !important; }
+
+.horario-item {
+  display: grid;
+  grid-template-columns: 84px auto 1fr 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+}
+.horario-item span { color: var(--cream); font-weight: 600; text-transform: none; }
+.horario-item input[type="checkbox"] { width: auto; }
+.horario-item input[type="time"] {
+  font-family: var(--body);
+  font-size: 0.8rem;
+  padding: 5px 6px;
+  border-radius: 6px;
+  border: 1.5px solid var(--card-border);
+  background: var(--bg-alt);
+  color: var(--cream);
+  width: 100%;
+}
+.horario-item.desabilitado input[type="time"] { opacity: 0.4; }
+
 .pedido-card {
   background: var(--card);
   border: 1px solid var(--card-border);

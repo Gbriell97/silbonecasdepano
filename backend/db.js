@@ -40,7 +40,46 @@ CREATE TABLE IF NOT EXISTS pedidos (
   itens_json TEXT NOT NULL,
   criado_em TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
+
+CREATE TABLE IF NOT EXISTS loja_config (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  nome TEXT NOT NULL DEFAULT 'Minha Loja',
+  tagline TEXT NOT NULL DEFAULT '',
+  logo TEXT,
+  capa1 TEXT,
+  capa2 TEXT,
+  capa3 TEXT,
+  cor_primaria TEXT NOT NULL DEFAULT '#e8a33d',
+  endereco TEXT NOT NULL DEFAULT '',
+  texto_entrega TEXT NOT NULL DEFAULT '',
+  sempre_aberto INTEGER NOT NULL DEFAULT 1,
+  horarios_json TEXT NOT NULL DEFAULT '{}'
+);
 `);
+
+// Seed da configuração da loja (linha única, id fixo = 1)
+const configExiste = db.prepare("SELECT COUNT(*) AS c FROM loja_config WHERE id = 1").get().c;
+if (!configExiste) {
+  const horariosPadrao = {
+    dom: { aberto: true, inicio: "10:00", fim: "22:00" },
+    seg: { aberto: true, inicio: "10:00", fim: "22:00" },
+    ter: { aberto: true, inicio: "10:00", fim: "22:00" },
+    qua: { aberto: true, inicio: "10:00", fim: "22:00" },
+    qui: { aberto: true, inicio: "10:00", fim: "22:00" },
+    sex: { aberto: true, inicio: "10:00", fim: "22:00" },
+    sab: { aberto: true, inicio: "10:00", fim: "22:00" },
+  };
+  db.prepare(
+    `INSERT INTO loja_config (id, nome, tagline, cor_primaria, texto_entrega, sempre_aberto, horarios_json)
+     VALUES (1, ?, ?, ?, ?, 1, ?)`
+  ).run(
+    "Sabor Express",
+    "Comida boa, feita com carinho.",
+    "#e8a33d",
+    "Entrega em até 40 min",
+    JSON.stringify(horariosPadrao)
+  );
+}
 
 // Seed inicial (apenas se o banco estiver vazio)
 const count = db.prepare("SELECT COUNT(*) AS c FROM categorias").get().c;

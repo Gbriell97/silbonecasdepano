@@ -72,8 +72,159 @@ function mostrarPainel() {
 // ---------- Carregar dados ----------
 
 async function carregarTudo() {
-  await Promise.all([carregarCardapio(), carregarPedidos()]);
+  await Promise.all([carregarCardapio(), carregarPedidos(), carregarLoja()]);
 }
+
+// ---------- Aparência da loja ----------
+
+const ordemDias = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"];
+const diasSemana = { seg: "Segunda", ter: "Terça", qua: "Quarta", qui: "Quinta", sex: "Sexta", sab: "Sábado", dom: "Domingo" };
+
+async function carregarLoja() {
+  try {
+    const loja = await apiAdmin("/api/admin/loja");
+    state.loja = loja;
+
+    document.getElementById("lojaNome").value = loja.nome || "";
+    document.getElementById("lojaTagline").value = loja.tagline || "";
+    document.getElementById("lojaEndereco").value = loja.endereco || "";
+    document.getElementById("lojaEntrega").value = loja.texto_entrega || "";
+    document.getElementById("lojaCor").value = loja.cor_primaria || "#2f6b3a";
+    document.getElementById("lojaSempreAberto").checked = !!loja.sempre_aberto;
+
+    if (loja.logo) {
+      document.getElementById("previewLogo").src = `/img/${loja.logo}`;
+      document.getElementById("previewLogo").hidden = false;
+      document.getElementById("previewLogoFallback").hidden = true;
+    }
+    ["capa1", "capa2", "capa3"].forEach((campo, i) => {
+      if (loja[campo]) {
+        const img = document.getElementById(`previewCapa${i + 1}`);
+        img.src = `/img/${loja[campo]}`;
+        img.hidden = false;
+      }
+    });
+
+    let horarios = {};
+    try {
+      horarios = JSON.parse(loja.horarios_json || "{}");
+    } catch {}
+    renderHorarios(horarios);
+    atualizarVisibilidadeHorarios();
+  } catch (err) {
+    console.error("Erro ao carregar loja:", err);
+  }
+}
+
+function renderHorarios(horarios) {
+  const container = document.getElementById("horariosLista");
+  container.innerHTML = ordemDias
+    .map((d) => {
+      const h = horarios[d] || { aberto: true, inicio: "09:00", fim: "22:00" };
+      return `
+      <div class="horario-item ${h.aberto ? "" : "desabilitado"}" data-dia="${d}">
+        <span>${diasSemana[d]}</span>
+        <input type="checkbox" class="horario-aberto" ${h.aberto ? "checked" : ""} />
+        <input type="time" class="horario-inicio" value="${h.inicio || "09:00"}" ${h.aberto ? "" : "disabled"} />
+        <input type="time" class="horario-fim" value="${h.fim || "22:00"}" ${h.aberto ? "" : "disabled"} />
+      </div>`;
+    })
+    .join("");
+
+  container.querySelectorAll(".horario-aberto").forEach((chk) => {
+    chk.addEventListener("change", (e) => {
+      const row = e.target.closest(".horario-item");
+      const aberto = e.target.checked;
+      row.classList.toggle("desabilitado", !aberto);
+      row.querySelectorAll('input[type="time"]').forEach((inp) => (inp.disabled = !aberto));
+    });
+  });
+}
+
+function coletarHorarios() {
+  const horarios = {};
+  document.querySelectorAll("#horariosLista .horario-item").forEach((row) => {
+    const dia = row.dataset.dia;
+    horarios[dia] = {
+      aberto: row.querySelector(".horario-aberto").checked,
+      inicio: row.querySelector(".horario-inicio").value,
+      fim: row.querySelector(".horario-fim").value,
+    };
+  });
+  return horarios;
+}
+
+function atualizarVisibilidadeHorarios() {
+  const bloco = document.getElementById("horariosBlock");
+  bloco.style.opacity = document.getElementById("lojaSempreAberto").checked ? "0.4" : "1";
+}
+document.getElementById("lojaSempreAberto").addEventListener("change", atualizarVisibilidadeHorarios);
+
+document.getElementById("formLoja").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = e.target.querySelector("button[type=submit]");
+  btn.disabled = true;
+  btn.textContent = "Salvando...";
+
+  try {
+    await apiAdmin("/api/admin/loja", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nome: document.getElementById("lojaNome").value.trim(),
+        tagline: document.getElementById("lojaTagline").value.trim(),
+        endereco: document.getElementById("lojaEndereco").value.trim(),
+        texto_entrega: document.getElementById("lojaEntrega").value.trim(),
+        cor_primaria: document.getElementById("lojaCor").value,
+        sempre_aberto: document.getElementById("lojaSempreAberto").checked,
+        horarios: coletarHorarios(),
+      }),
+    });
+    btn.textContent = "Salvo! ✓";
+  } catch (err) {
+    alert("Erro ao salvar: " + err.message);
+    btn.textContent = "Salvar aparência";
+  } finally {
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = "Salvar aparência";
+    }, 1500);
+  }
+});
+
+async function enviarImagemLoja(campo, arquivo) {
+  const formData = new FormData();
+  formData.append("imagem", arquivo);
+  return apiAdmin(`/api/admin/loja/imagem/${campo}`, { method: "POST", body: formData });
+}
+
+document.getElementById("inputLogo").addEventListener("change", async (e) => {
+  const arquivo = e.target.files[0];
+  if (!arquivo) return;
+  try {
+    await enviarImagemLoja("logo", arquivo);
+    document.getElementById("previewLogo").src = URL.createObjectURL(arquivo);
+    document.getElementById("previewLogo").hidden = false;
+    document.getElementById("previewLogoFallback").hidden = true;
+  } catch (err) {
+    alert("Erro ao enviar logo: " + err.message);
+  }
+});
+
+["capa1", "capa2", "capa3"].forEach((campo, i) => {
+  document.getElementById(`input${campo[0].toUpperCase()}${campo.slice(1)}`).addEventListener("change", async (e) => {
+    const arquivo = e.target.files[0];
+    if (!arquivo) return;
+    try {
+      await enviarImagemLoja(campo, arquivo);
+      const img = document.getElementById(`previewCapa${i + 1}`);
+      img.src = URL.createObjectURL(arquivo);
+      img.hidden = false;
+    } catch (err) {
+      alert("Erro ao enviar foto de capa: " + err.message);
+    }
+  });
+});
 
 async function carregarCardapio() {
   try {

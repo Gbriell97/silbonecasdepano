@@ -39,6 +39,67 @@
 
   <button id="btnNovaCategoria" class="btn-nova-categoria">+ Nova categoria</button>
 
+  <section class="loja-section">
+    <h2>Aparência da loja</h2>
+
+    <div class="loja-field-group">
+      <label>Logomarca</label>
+      <div class="upload-row">
+        <img id="previewLogo" class="preview-circular" hidden />
+        <div id="previewLogoFallback" class="preview-circular preview-placeholder">🍴</div>
+        <input type="file" id="inputLogo" accept="image/*" />
+      </div>
+    </div>
+
+    <div class="loja-field-group">
+      <label>Fotos de capa (até 3)</label>
+      <div class="capas-grid">
+        <div class="capa-slot">
+          <img id="previewCapa1" class="preview-capa" hidden />
+          <input type="file" id="inputCapa1" accept="image/*" />
+        </div>
+        <div class="capa-slot">
+          <img id="previewCapa2" class="preview-capa" hidden />
+          <input type="file" id="inputCapa2" accept="image/*" />
+        </div>
+        <div class="capa-slot">
+          <img id="previewCapa3" class="preview-capa" hidden />
+          <input type="file" id="inputCapa3" accept="image/*" />
+        </div>
+      </div>
+    </div>
+
+    <form id="formLoja" class="loja-form">
+      <label>Nome da loja
+        <input type="text" id="lojaNome" required />
+      </label>
+      <label>Frase de efeito (subtítulo)
+        <input type="text" id="lojaTagline" placeholder="Ex: Comida boa, feita com carinho" />
+      </label>
+      <label>Endereço
+        <input type="text" id="lojaEndereco" placeholder="Rua, número, bairro, cidade" />
+      </label>
+      <label>Texto de entrega
+        <input type="text" id="lojaEntrega" placeholder="Ex: Entrega em até 40 min" />
+      </label>
+      <label>Cor principal do site
+        <input type="color" id="lojaCor" value="#2f6b3a" />
+      </label>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="lojaSempreAberto" />
+        Ignorar horário (loja sempre aparece como aberta)
+      </label>
+
+      <div id="horariosBlock" class="horarios-block">
+        <label class="horarios-title">Horário de funcionamento</label>
+        <div id="horariosLista"></div>
+      </div>
+
+      <button type="submit" class="btn-primario">Salvar aparência</button>
+    </form>
+  </section>
+
   <section class="pedidos-section">
     <h2>Últimos pedidos</h2>
     <div id="listaPedidos"><p class="loading">Carregando pedidos...</p></div>

@@ -1,29 +1,38 @@
 const state = {
+  loja: null,
   categorias: [],
-  carrinho: {}, // { produtoId: { produto, quantidade } }
+  carrinho: {},
+  busca: "",
 };
 
 const fmt = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const emojiPorCategoria = {
-  "lanches": "🍔",
-  "pratos feitos": "🍛",
-  "bebidas": "🥤",
-  "sobremesas": "🍮",
+  "lanches": "🍔", "pratos feitos": "🍛", "bebidas": "🥤", "sobremesas": "🍮",
+  "café": "☕", "cafe": "☕", "cereais": "🌾", "mel": "🍯",
+  "polpa de fruta": "🍓", "ovos caipiras": "🥚", "frutas congeladas": "🧊",
+  "açaí na caixa": "🍇", "acai na caixa": "🍇", "combos": "🍱",
 };
 
 function emojiFor(nomeCategoria) {
   return emojiPorCategoria[nomeCategoria.toLowerCase()] || "🍽️";
 }
 
+const diasSemana = { dom: "Domingo", seg: "Segunda", ter: "Terça", qua: "Quarta", qui: "Quinta", sex: "Sexta", sab: "Sábado" };
+const ordemDias = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"];
+
 async function init() {
-  const [config, cardapio] = await Promise.all([
-    fetch("/api/config").then((r) => r.json()),
+  const [loja, cardapio] = await Promise.all([
+    fetch("/api/loja").then((r) => r.json()),
     fetch("/api/cardapio").then((r) => r.json()),
   ]);
 
-  document.getElementById("nomeLoja").textContent = config.nomeLoja;
-  document.title = config.nomeLoja + " · Cardápio";
+  state.loja = loja;
+  document.title = loja.nome;
+  document.documentElement.style.setProperty("--cor-primaria", loja.corPrimaria || "#2f6b3a");
+
+  renderCapa(loja);
+  renderStoreCard(loja);
 
   state.categorias = cardapio;
   renderNav(cardapio);
@@ -31,22 +40,69 @@ async function init() {
   bindGlobalEvents();
 }
 
+function renderCapa(loja) {
+  const cover = document.getElementById("cover");
+  if (loja.capas && loja.capas.length) {
+    cover.innerHTML = loja.capas.map((c) => `<img src="/img/${c}" onerror="this.remove()" />`).join("");
+  } else {
+    cover.innerHTML = `<div class="cover-placeholder">📷</div>`;
+  }
+}
+
+function renderStoreCard(loja) {
+  document.getElementById("storeName").textContent = loja.nome;
+  document.getElementById("storeTagline").textContent = loja.tagline || "";
+
+  const logo = document.getElementById("storeLogo");
+  const fallback = document.getElementById("storeLogoFallback");
+  if (loja.logo) {
+    logo.src = `/img/${loja.logo}`;
+    logo.hidden = false;
+    fallback.hidden = true;
+    logo.onerror = () => { logo.hidden = true; fallback.hidden = false; };
+  }
+
+  const statusDot = document.getElementById("statusDot");
+  const statusText = document.getElementById("statusText");
+  const statusWrap = statusDot.closest(".store-status");
+  if (loja.aberto) {
+    statusDot.classList.remove("fechado");
+    statusWrap.classList.remove("fechado");
+    statusText.textContent = "Aberto agora";
+  } else {
+    statusDot.classList.add("fechado");
+    statusWrap.classList.add("fechado");
+    statusText.textContent = "Fechado no momento";
+  }
+  document.getElementById("storeDelivery").textContent = loja.textoEntrega || "";
+}
+
 function renderNav(categorias) {
   const nav = document.getElementById("catNav");
   nav.innerHTML = categorias
     .map(
-      (cat, i) =>
-        `<button class="cat-pill ${i === 0 ? "active" : ""}" data-target="cat-${cat.id}">${cat.nome}</button>`
+      (cat, i) => `
+      <button class="cat-item ${i === 0 ? "active" : ""}" data-target="cat-${cat.id}">
+        <span class="cat-icon">${emojiFor(cat.nome)}</span>
+        <span class="cat-label">${cat.nome}</span>
+      </button>`
     )
     .join("");
 
-  nav.querySelectorAll(".cat-pill").forEach((btn) => {
+  nav.querySelectorAll(".cat-item").forEach((btn) => {
     btn.addEventListener("click", () => {
-      nav.querySelectorAll(".cat-pill").forEach((b) => b.classList.remove("active"));
+      nav.querySelectorAll(".cat-item").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
-      document.getElementById(btn.dataset.target).scrollIntoView({ behavior: "smooth", block: "start" });
+      const el = document.getElementById(btn.dataset.target);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   });
+}
+
+function produtosFiltrados(produtos) {
+  if (!state.busca) return produtos;
+  const termo = state.busca.toLowerCase();
+  return produtos.filter((p) => p.nome.toLowerCase().includes(termo));
 }
 
 function renderMenu(categorias) {
@@ -57,26 +113,25 @@ function renderMenu(categorias) {
     return;
   }
 
-  menu.innerHTML = categorias
-    .map(
-      (cat) => `
+  const blocos = categorias
+    .map((cat) => {
+      const produtos = produtosFiltrados(cat.produtos);
+      if (!produtos.length) return "";
+      return `
       <section class="cat-section" id="cat-${cat.id}">
         <h2 class="cat-title">${cat.nome}</h2>
-        ${cat.produtos.map((p) => productCardHTML(p, cat.nome)).join("")}
-      </section>
-    `
-    )
+        <div class="product-grid">
+          ${produtos.map((p) => productCardHTML(p, cat.nome)).join("")}
+        </div>
+      </section>`;
+    })
     .join("");
 
-  menu.querySelectorAll("[data-add]").forEach((btn) => {
-    btn.addEventListener("click", () => addItem(btn.dataset.add));
-  });
-  menu.querySelectorAll("[data-inc]").forEach((btn) => {
-    btn.addEventListener("click", () => addItem(btn.dataset.inc));
-  });
-  menu.querySelectorAll("[data-dec]").forEach((btn) => {
-    btn.addEventListener("click", () => removeItem(btn.dataset.dec));
-  });
+  menu.innerHTML = blocos || `<p class="loading">Nenhum item encontrado para "${state.busca}".</p>`;
+
+  menu.querySelectorAll("[data-add]").forEach((btn) => btn.addEventListener("click", () => addItem(btn.dataset.add)));
+  menu.querySelectorAll("[data-inc]").forEach((btn) => btn.addEventListener("click", () => addItem(btn.dataset.inc)));
+  menu.querySelectorAll("[data-dec]").forEach((btn) => btn.addEventListener("click", () => removeItem(btn.dataset.dec)));
 }
 
 function productCardHTML(produto, nomeCategoria) {
@@ -86,24 +141,24 @@ function productCardHTML(produto, nomeCategoria) {
   return `
     <div class="product-card">
       <div class="product-thumb">
-        <span class="thumb-emoji">${emojiFor(nomeCategoria)}</span>
+        <span>${emojiFor(nomeCategoria)}</span>
         ${produto.imagem ? `<img class="thumb-img" src="/img/${produto.imagem}" onerror="this.remove()" />` : ""}
       </div>
       <div class="product-info">
         <h3>${produto.nome}</h3>
         <p>${produto.descricao || ""}</p>
-        <div class="product-price">${fmt(produto.preco)}</div>
-      </div>
-      <div>
-        ${
-          qtd === 0
-            ? `<button class="add-btn" data-add="${produto.id}">Adicionar</button>`
-            : `<div class="qty-controls">
-                <button class="qty-btn remove" data-dec="${produto.id}">−</button>
-                <span class="qty-value">${qtd}</span>
-                <button class="qty-btn" data-inc="${produto.id}">+</button>
-               </div>`
-        }
+        <div class="product-bottom">
+          <span class="product-price">${fmt(produto.preco)}</span>
+          ${
+            qtd === 0
+              ? `<button class="add-btn" data-add="${produto.id}">+</button>`
+              : `<div class="qty-controls">
+                  <button class="qty-btn remove" data-dec="${produto.id}">−</button>
+                  <span class="qty-value">${qtd}</span>
+                  <button class="qty-btn" data-inc="${produto.id}">+</button>
+                 </div>`
+          }
+        </div>
       </div>
     </div>
   `;
@@ -120,9 +175,7 @@ function findProduto(id) {
 function addItem(id) {
   const produto = findProduto(id);
   if (!produto) return;
-  if (!state.carrinho[id]) {
-    state.carrinho[id] = { produto, quantidade: 0 };
-  }
+  if (!state.carrinho[id]) state.carrinho[id] = { produto, quantidade: 0 };
   state.carrinho[id].quantidade += 1;
   refresh();
 }
@@ -137,7 +190,6 @@ function removeItem(id) {
 function cartTotal() {
   return Object.values(state.carrinho).reduce((soma, i) => soma + i.produto.preco * i.quantidade, 0);
 }
-
 function cartCount() {
   return Object.values(state.carrinho).reduce((soma, i) => soma + i.quantidade, 0);
 }
@@ -147,10 +199,9 @@ function refresh() {
   renderTicket();
 
   const count = cartCount();
-  document.getElementById("cartCount").textContent = count;
-  document.getElementById("floatingCount").textContent = count;
-  document.getElementById("floatingTotal").textContent = fmt(cartTotal());
-  document.getElementById("floatingCart").classList.toggle("show", count > 0);
+  const badge = document.getElementById("cartCount");
+  badge.textContent = count;
+  badge.hidden = count === 0;
 }
 
 function renderTicket() {
@@ -173,8 +224,7 @@ function renderTicket() {
             <span class="qty-value">${item.quantidade}</span>
             <button class="qty-btn" data-inc="${id}">+</button>
           </div>
-        </div>
-      `
+        </div>`
       )
       .join("");
 
@@ -187,22 +237,103 @@ function renderTicket() {
 
 function openTicket() {
   document.getElementById("ticket").classList.add("open");
+  setBottomActive("carrinho");
 }
 function closeTicketFn() {
   document.getElementById("ticket").classList.remove("open");
+  setBottomActive("catalogo");
+}
+
+function setBottomActive(nome) {
+  document.querySelectorAll(".bottom-item").forEach((b) => b.classList.toggle("active", b.dataset.nav === nome));
+}
+
+function abrirInfo() {
+  const loja = state.loja;
+  document.getElementById("infoTagline").textContent = loja.tagline || "";
+  document.getElementById("infoEndereco").textContent = loja.endereco ? `📍 ${loja.endereco}` : "";
+  document.getElementById("infoEntrega").textContent = loja.textoEntrega ? `🛵 ${loja.textoEntrega}` : "";
+
+  const chaveDias = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
+  const hojeChave = chaveDias[new Date().getDay()];
+
+  const horariosEl = document.getElementById("infoHorarios");
+  if (loja.horarios && Object.keys(loja.horarios).length) {
+    horariosEl.innerHTML = ordemDias
+      .map((d) => {
+        const h = loja.horarios[d];
+        const texto = h && h.aberto ? `${h.inicio} às ${h.fim}` : "Fechado";
+        return `<div class="horario-row ${d === hojeChave ? "hoje" : ""}"><span>${diasSemana[d]}</span><span>${texto}</span></div>`;
+      })
+      .join("");
+  } else {
+    horariosEl.innerHTML = `<p>Consulte via WhatsApp.</p>`;
+  }
+
+  document.getElementById("modalInfo").hidden = false;
+  setBottomActive("info");
 }
 
 function bindGlobalEvents() {
   document.getElementById("cartToggle").addEventListener("click", openTicket);
-  document.getElementById("floatingCart").addEventListener("click", openTicket);
   document.getElementById("closeTicket").addEventListener("click", closeTicketFn);
   document.getElementById("ticketBackdrop").addEventListener("click", closeTicketFn);
+
+  document.getElementById("searchInput").addEventListener("input", (e) => {
+    state.busca = e.target.value.trim();
+    renderMenu(state.categorias);
+  });
+
+  document.getElementById("btnWhats").addEventListener("click", () => {
+    const numero = state.loja?.whatsapp || "";
+    window.open(`https://wa.me/${numero}`, "_blank");
+  });
+
+  document.getElementById("btnRepetir").addEventListener("click", () => {
+    const ultimo = JSON.parse(localStorage.getItem("ultimo_pedido") || "null");
+    if (!ultimo || !ultimo.length) {
+      alert("Você ainda não fez nenhum pedido por aqui.");
+      return;
+    }
+    ultimo.forEach((item) => {
+      for (let i = 0; i < item.quantidade; i++) addItem(String(item.id));
+    });
+    openTicket();
+  });
+
+  document.querySelectorAll(".bottom-item").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const nav = btn.dataset.nav;
+      if (nav === "catalogo") {
+        closeTicketFn();
+        document.getElementById("modalInfo").hidden = true;
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        setBottomActive("catalogo");
+      } else if (nav === "carrinho") {
+        document.getElementById("modalInfo").hidden = true;
+        openTicket();
+      } else if (nav === "info") {
+        closeTicketFn();
+        abrirInfo();
+      }
+    });
+  });
+
+  document.getElementById("btnFecharInfo").addEventListener("click", () => {
+    document.getElementById("modalInfo").hidden = true;
+    setBottomActive("catalogo");
+  });
+  document.getElementById("infoBackdrop").addEventListener("click", () => {
+    document.getElementById("modalInfo").hidden = true;
+    setBottomActive("catalogo");
+  });
 
   document.getElementById("checkoutForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const btn = document.getElementById("btnConfirm");
-    const itens = Object.values(state.carrinho).map((i) => ({
+    const itens = Object.entries(state.carrinho).map(([id, i]) => ({
+      id,
       nome: i.produto.nome,
       preco: i.produto.preco,
       quantidade: i.quantidade,
@@ -228,10 +359,8 @@ function bindGlobalEvents() {
         body: JSON.stringify(payload),
       });
       const data = await resp.json();
-
       if (!resp.ok) throw new Error(data.erro || "Erro ao enviar pedido");
 
-      // Se o cliente escolheu pagamento online, tenta criar preferência de pagamento
       if (payload.forma_pagamento === "Pagamento online") {
         try {
           const pagResp = await fetch("/api/pagamento/criar-preferencia", {
@@ -240,15 +369,13 @@ function bindGlobalEvents() {
             body: JSON.stringify({ itens, pedido_id: data.pedido_id }),
           });
           const pagData = await pagResp.json();
-          if (pagResp.ok && pagData.checkout_url) {
-            window.open(pagData.checkout_url, "_blank");
-          }
+          if (pagResp.ok && pagData.checkout_url) window.open(pagData.checkout_url, "_blank");
         } catch (err) {
           console.warn("Pagamento online indisponível:", err);
         }
       }
 
-      // Abre o WhatsApp com o pedido já formatado
+      localStorage.setItem("ultimo_pedido", JSON.stringify(itens));
       window.open(data.link_whatsapp, "_blank");
 
       state.carrinho = {};
