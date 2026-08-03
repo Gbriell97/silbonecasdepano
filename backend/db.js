@@ -15,7 +15,8 @@ db.exec(`
 CREATE TABLE IF NOT EXISTS categorias (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   nome TEXT NOT NULL,
-  ordem INTEGER NOT NULL DEFAULT 0
+  ordem INTEGER NOT NULL DEFAULT 0,
+  icone TEXT
 );
 
 CREATE TABLE IF NOT EXISTS produtos (
@@ -25,6 +26,7 @@ CREATE TABLE IF NOT EXISTS produtos (
   descricao TEXT,
   preco REAL NOT NULL,
   imagem TEXT,
+  imagem_pos TEXT NOT NULL DEFAULT '50% 50%',
   disponivel INTEGER NOT NULL DEFAULT 1,
   FOREIGN KEY (categoria_id) REFERENCES categorias(id)
 );
@@ -49,6 +51,9 @@ CREATE TABLE IF NOT EXISTS loja_config (
   capa1 TEXT,
   capa2 TEXT,
   capa3 TEXT,
+  capa1_pos TEXT NOT NULL DEFAULT '50% 50%',
+  capa2_pos TEXT NOT NULL DEFAULT '50% 50%',
+  capa3_pos TEXT NOT NULL DEFAULT '50% 50%',
   cor_primaria TEXT NOT NULL DEFAULT '#e8a33d',
   endereco TEXT NOT NULL DEFAULT '',
   texto_entrega TEXT NOT NULL DEFAULT '',
@@ -56,6 +61,20 @@ CREATE TABLE IF NOT EXISTS loja_config (
   horarios_json TEXT NOT NULL DEFAULT '{}'
 );
 `);
+
+// Migrações leves: adiciona colunas novas em bancos já existentes (versões antigas do app)
+function tentarAdicionarColuna(tabela, definicaoColuna) {
+  try {
+    db.exec(`ALTER TABLE ${tabela} ADD COLUMN ${definicaoColuna}`);
+  } catch (e) {
+    // Coluna já existe — ignora
+  }
+}
+tentarAdicionarColuna("categorias", "icone TEXT");
+tentarAdicionarColuna("produtos", "imagem_pos TEXT NOT NULL DEFAULT '50% 50%'");
+tentarAdicionarColuna("loja_config", "capa1_pos TEXT NOT NULL DEFAULT '50% 50%'");
+tentarAdicionarColuna("loja_config", "capa2_pos TEXT NOT NULL DEFAULT '50% 50%'");
+tentarAdicionarColuna("loja_config", "capa3_pos TEXT NOT NULL DEFAULT '50% 50%'");
 
 // Seed da configuração da loja (linha única, id fixo = 1)
 const configExiste = db.prepare("SELECT COUNT(*) AS c FROM loja_config WHERE id = 1").get().c;

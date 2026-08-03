@@ -14,8 +14,10 @@ const emojiPorCategoria = {
   "açaí na caixa": "🍇", "acai na caixa": "🍇", "combos": "🍱",
 };
 
-function emojiFor(nomeCategoria) {
-  return emojiPorCategoria[nomeCategoria.toLowerCase()] || "🍽️";
+function emojiFor(categoria) {
+  if (typeof categoria === "object" && categoria?.icone) return categoria.icone;
+  const nome = typeof categoria === "string" ? categoria : categoria?.nome || "";
+  return emojiPorCategoria[nome.toLowerCase()] || "🍽️";
 }
 
 const diasSemana = { dom: "Domingo", seg: "Segunda", ter: "Terça", qua: "Quarta", qui: "Quinta", sex: "Sexta", sab: "Sábado" };
@@ -43,7 +45,9 @@ async function init() {
 function renderCapa(loja) {
   const cover = document.getElementById("cover");
   if (loja.capas && loja.capas.length) {
-    cover.innerHTML = loja.capas.map((c) => `<img src="/img/${c}" onerror="this.remove()" />`).join("");
+    cover.innerHTML = loja.capas
+      .map((c) => `<img src="/img/${c.arquivo}" style="object-position: ${c.posicao || "50% 50%"}" onerror="this.remove()" />`)
+      .join("");
   } else {
     cover.innerHTML = `<div class="cover-placeholder">📷</div>`;
   }
@@ -83,7 +87,7 @@ function renderNav(categorias) {
     .map(
       (cat, i) => `
       <button class="cat-item ${i === 0 ? "active" : ""}" data-target="cat-${cat.id}">
-        <span class="cat-icon">${emojiFor(cat.nome)}</span>
+        <span class="cat-icon">${emojiFor(cat)}</span>
         <span class="cat-label">${cat.nome}</span>
       </button>`
     )
@@ -121,7 +125,7 @@ function renderMenu(categorias) {
       <section class="cat-section" id="cat-${cat.id}">
         <h2 class="cat-title">${cat.nome}</h2>
         <div class="product-grid">
-          ${produtos.map((p) => productCardHTML(p, cat.nome)).join("")}
+          ${produtos.map((p) => productCardHTML(p, cat)).join("")}
         </div>
       </section>`;
     })
@@ -132,17 +136,29 @@ function renderMenu(categorias) {
   menu.querySelectorAll("[data-add]").forEach((btn) => btn.addEventListener("click", () => addItem(btn.dataset.add)));
   menu.querySelectorAll("[data-inc]").forEach((btn) => btn.addEventListener("click", () => addItem(btn.dataset.inc)));
   menu.querySelectorAll("[data-dec]").forEach((btn) => btn.addEventListener("click", () => removeItem(btn.dataset.dec)));
+  menu.querySelectorAll("[data-foto]").forEach((thumb) =>
+    thumb.addEventListener("click", () => abrirFoto(thumb.dataset.foto))
+  );
 }
 
-function productCardHTML(produto, nomeCategoria) {
+function abrirFoto(src) {
+  document.getElementById("fotoAmpliada").src = src;
+  document.getElementById("modalFoto").hidden = false;
+}
+function fecharFoto() {
+  document.getElementById("modalFoto").hidden = true;
+}
+
+function productCardHTML(produto, categoria) {
   const item = state.carrinho[produto.id];
   const qtd = item ? item.quantidade : 0;
+  const posicao = produto.imagem_pos || "50% 50%";
 
   return `
     <div class="product-card">
-      <div class="product-thumb">
-        <span>${emojiFor(nomeCategoria)}</span>
-        ${produto.imagem ? `<img class="thumb-img" src="/img/${produto.imagem}" onerror="this.remove()" />` : ""}
+      <div class="product-thumb" ${produto.imagem ? `data-foto="/img/${produto.imagem}"` : ""}>
+        <span>${emojiFor(categoria)}</span>
+        ${produto.imagem ? `<img class="thumb-img" src="/img/${produto.imagem}" style="object-position: ${posicao}" onerror="this.remove()" />` : ""}
       </div>
       <div class="product-info">
         <h3>${produto.nome}</h3>
@@ -278,6 +294,8 @@ function bindGlobalEvents() {
   document.getElementById("cartToggle").addEventListener("click", openTicket);
   document.getElementById("closeTicket").addEventListener("click", closeTicketFn);
   document.getElementById("ticketBackdrop").addEventListener("click", closeTicketFn);
+  document.getElementById("fecharFoto").addEventListener("click", fecharFoto);
+  document.getElementById("fotoBackdrop").addEventListener("click", fecharFoto);
 
   document.getElementById("searchInput").addEventListener("input", (e) => {
     state.busca = e.target.value.trim();

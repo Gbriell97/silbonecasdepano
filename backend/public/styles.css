@@ -457,6 +457,41 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; }
 .horario-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 0; border-bottom: 1px dotted var(--border); }
 .horario-row.hoje { font-weight: 800; color: var(--cor-primaria); }
 
+/* ---------- Zoom da foto ---------- */
+
+.photo-modal .modal-backdrop { background: rgba(0,0,0,0.85); }
+.photo-modal-box {
+  position: relative;
+  z-index: 1;
+  max-width: 92vw;
+  max-height: 86vh;
+  margin: 7vh auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.photo-modal-box img {
+  max-width: 100%;
+  max-height: 86vh;
+  border-radius: 12px;
+  object-fit: contain;
+}
+.photo-modal-close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: #fff;
+  font-size: 1.2rem;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.product-thumb { cursor: zoom-in; }
+
 /* ---------- Barra inferior ---------- */
 
 .bottom-nav {

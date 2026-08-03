@@ -53,6 +53,7 @@
 
     <div class="loja-field-group">
       <label>Fotos de capa (até 3)</label>
+      <p class="hint-reenquadrar">💡 Clique na foto para escolher o ponto de foco</p>
       <div class="capas-grid">
         <div class="capa-slot">
           <img id="previewCapa1" class="preview-capa" hidden />
@@ -106,6 +107,29 @@
   </section>
 </div>
 
+<!-- Modal de categoria (nome + ícone) -->
+<div class="modal" id="modalCategoria" hidden>
+  <div class="modal-backdrop" id="modalCategoriaBackdrop"></div>
+  <form class="modal-box" id="formCategoria">
+    <h2 id="modalCategoriaTitulo">Nova categoria</h2>
+
+    <label>Nome
+      <input type="text" id="categoriaNome" required />
+    </label>
+
+    <label>Ícone
+      <input type="text" id="categoriaIcone" maxlength="4" placeholder="Ex: 🍔" />
+    </label>
+
+    <div class="emoji-sugestoes" id="emojiSugestoes"></div>
+
+    <div class="modal-actions">
+      <button type="button" id="btnCancelarCategoria" class="btn-secundario">Cancelar</button>
+      <button type="submit" class="btn-primario">Salvar</button>
+    </div>
+  </form>
+</div>
+
 <!-- Modal editar/criar produto -->
 <div class="modal" id="modalProduto" hidden>
   <div class="modal-backdrop" id="modalBackdrop"></div>
@@ -133,6 +157,7 @@
       <input type="file" id="campoFoto" accept="image/*" />
     </label>
     <img id="previewFoto" class="preview-foto" hidden />
+    <p class="hint-reenquadrar" id="hintFoto" hidden>💡 Clique na foto para escolher o ponto de foco</p>
 
     <div class="modal-actions">
       <button type="button" id="btnCancelar" class="btn-secundario">Cancelar</button>

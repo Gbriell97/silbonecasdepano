@@ -101,11 +101,17 @@ app.get("/api/loja", (req, res) => {
     horarios = JSON.parse(configLoja.horarios_json || "{}");
   } catch {}
 
+  const capas = [
+    { arquivo: configLoja.capa1, posicao: configLoja.capa1_pos },
+    { arquivo: configLoja.capa2, posicao: configLoja.capa2_pos },
+    { arquivo: configLoja.capa3, posicao: configLoja.capa3_pos },
+  ].filter((c) => c.arquivo);
+
   res.json({
     nome: configLoja.nome,
     tagline: configLoja.tagline,
     logo: configLoja.logo,
-    capas: [configLoja.capa1, configLoja.capa2, configLoja.capa3].filter(Boolean),
+    capas,
     corPrimaria: configLoja.cor_primaria,
     endereco: configLoja.endereco,
     textoEntrega: configLoja.texto_entrega,
@@ -246,16 +252,24 @@ app.get("/api/admin/cardapio", checarSenhaAdmin, (req, res) => {
 
 // --- Categorias ---
 app.post("/api/admin/categorias", checarSenhaAdmin, (req, res) => {
-  const { nome } = req.body;
+  const { nome, icone } = req.body;
   if (!nome) return res.status(400).json({ erro: "Nome da categoria é obrigatório." });
   const ordemMax = db.prepare("SELECT MAX(ordem) AS m FROM categorias").get().m || 0;
-  const info = db.prepare("INSERT INTO categorias (nome, ordem) VALUES (?, ?)").run(nome, ordemMax + 1);
-  res.json({ id: info.lastInsertRowid, nome, ordem: ordemMax + 1 });
+  const info = db
+    .prepare("INSERT INTO categorias (nome, ordem, icone) VALUES (?, ?, ?)")
+    .run(nome, ordemMax + 1, icone || null);
+  res.json({ id: info.lastInsertRowid, nome, ordem: ordemMax + 1, icone: icone || null });
 });
 
 app.put("/api/admin/categorias/:id", checarSenhaAdmin, (req, res) => {
-  const { nome } = req.body;
-  db.prepare("UPDATE categorias SET nome = ? WHERE id = ?").run(nome, req.params.id);
+  const { nome, icone } = req.body;
+  const atual = db.prepare("SELECT * FROM categorias WHERE id = ?").get(req.params.id);
+  if (!atual) return res.status(404).json({ erro: "Categoria não encontrada." });
+  db.prepare("UPDATE categorias SET nome = ?, icone = ? WHERE id = ?").run(
+    nome ?? atual.nome,
+    icone !== undefined ? icone : atual.icone,
+    req.params.id
+  );
   res.json({ ok: true });
 });
 
@@ -281,18 +295,19 @@ app.post("/api/admin/produtos", checarSenhaAdmin, (req, res) => {
 });
 
 app.put("/api/admin/produtos/:id", checarSenhaAdmin, (req, res) => {
-  const { categoria_id, nome, descricao, preco, disponivel } = req.body;
+  const { categoria_id, nome, descricao, preco, disponivel, imagem_pos } = req.body;
   const atual = db.prepare("SELECT * FROM produtos WHERE id = ?").get(req.params.id);
   if (!atual) return res.status(404).json({ erro: "Produto não encontrado." });
 
   db.prepare(
-    `UPDATE produtos SET categoria_id = ?, nome = ?, descricao = ?, preco = ?, disponivel = ? WHERE id = ?`
+    `UPDATE produtos SET categoria_id = ?, nome = ?, descricao = ?, preco = ?, disponivel = ?, imagem_pos = ? WHERE id = ?`
   ).run(
     categoria_id ?? atual.categoria_id,
     nome ?? atual.nome,
     descricao ?? atual.descricao,
     preco ?? atual.preco,
     disponivel !== undefined ? (disponivel ? 1 : 0) : atual.disponivel,
+    imagem_pos ?? atual.imagem_pos,
     req.params.id
   );
   res.json({ ok: true });
@@ -366,6 +381,19 @@ app.post("/api/admin/loja/imagem/:campo", checarSenhaAdmin, (req, res, next) => 
 
   db.prepare(`UPDATE loja_config SET ${campo} = ? WHERE id = 1`).run(req.file.filename);
   res.json({ ok: true, imagem: req.file.filename });
+});
+
+// Salva só a posição de enquadramento de uma capa (campo: "capa1", "capa2" ou "capa3")
+app.put("/api/admin/loja/posicao/:campo", checarSenhaAdmin, (req, res) => {
+  const camposValidos = ["capa1", "capa2", "capa3"];
+  if (!camposValidos.includes(req.params.campo)) {
+    return res.status(400).json({ erro: "Campo inválido." });
+  }
+  const { posicao } = req.body;
+  if (!posicao) return res.status(400).json({ erro: "Posição é obrigatória." });
+
+  db.prepare(`UPDATE loja_config SET ${req.params.campo}_pos = ? WHERE id = 1`).run(posicao);
+  res.json({ ok: true });
 });
 
 app.listen(PORT, () => {

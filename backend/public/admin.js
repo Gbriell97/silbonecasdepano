@@ -101,6 +101,7 @@ async function carregarLoja() {
       if (loja[campo]) {
         const img = document.getElementById(`previewCapa${i + 1}`);
         img.src = `/img/${loja[campo]}`;
+        img.style.objectPosition = loja[`${campo}_pos`] || "50% 50%";
         img.hidden = false;
       }
     });
@@ -219,9 +220,29 @@ document.getElementById("inputLogo").addEventListener("change", async (e) => {
       await enviarImagemLoja(campo, arquivo);
       const img = document.getElementById(`previewCapa${i + 1}`);
       img.src = URL.createObjectURL(arquivo);
+      img.style.objectPosition = "50% 50%";
       img.hidden = false;
     } catch (err) {
       alert("Erro ao enviar foto de capa: " + err.message);
+    }
+  });
+
+  // Clique na prévia da capa define o ponto de foco (reenquadramento)
+  const previewImg = document.getElementById(`previewCapa${i + 1}`);
+  previewImg.addEventListener("click", async (e) => {
+    const rect = previewImg.getBoundingClientRect();
+    const x = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+    const y = Math.round(((e.clientY - rect.top) / rect.height) * 100);
+    const posicao = `${x}% ${y}%`;
+    previewImg.style.objectPosition = posicao;
+    try {
+      await apiAdmin(`/api/admin/loja/posicao/${campo}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ posicao }),
+      });
+    } catch (err) {
+      alert("Erro ao salvar enquadramento: " + err.message);
     }
   });
 });
@@ -279,10 +300,10 @@ function renderCardapio() {
       (cat) => `
     <div class="admin-cat-block">
       <div class="admin-cat-title">
-        <h2>${cat.nome}</h2>
+        <h2>${cat.icone ? cat.icone + " " : ""}${cat.nome}</h2>
         <div class="admin-cat-actions">
           <button class="btn-mini" data-add-produto="${cat.id}">+ item</button>
-          <button class="btn-mini" data-rename-cat="${cat.id}">renomear</button>
+          <button class="btn-mini" data-edit-cat="${cat.id}">editar</button>
           <button class="btn-mini danger" data-del-cat="${cat.id}">excluir</button>
         </div>
       </div>
@@ -298,7 +319,7 @@ function renderCardapio() {
   container.querySelectorAll("[data-add-produto]").forEach((b) =>
     b.addEventListener("click", () => abrirModal(null, b.dataset.addProduto))
   );
-  container.querySelectorAll("[data-rename-cat]").forEach((b) => b.addEventListener("click", () => renomearCategoria(b.dataset.renameCat)));
+  container.querySelectorAll("[data-edit-cat]").forEach((b) => b.addEventListener("click", () => abrirModalCategoria(b.dataset.editCat)));
   container.querySelectorAll("[data-del-cat]").forEach((b) => b.addEventListener("click", () => excluirCategoria(b.dataset.delCat)));
 }
 
@@ -324,36 +345,77 @@ function produtoRowHTML(p) {
 
 // ---------- Categorias ----------
 
-document.getElementById("btnNovaCategoria").addEventListener("click", async () => {
-  const nome = prompt("Nome da nova categoria:");
+const EMOJI_SUGESTOES = ["🍔","🍕","🍟","🌭","🥪","🍗","🍖","🥩","🍛","🍜","🍝","🍲","🥘","🍱","🍣","🍤","🥗","🌮","🌯","🥙","🥟","🍳","🥚","🧀","🥐","🍞","🥖","🧁","🍰","🎂","🍮","🍨","🍦","🍩","🍪","🍫","🍬","🍭","🥤","☕","🧃","🧋","🍺","🍷","🍹","🥤","🧊","🍇","🍓","🍉","🍎","🍌","🥭","🍍","🥥","🌾","🍯","🐔","🥛","🎁"];
+
+document.getElementById("emojiSugestoes").innerHTML = EMOJI_SUGESTOES.map(
+  (e) => `<button type="button" class="emoji-chip" data-emoji="${e}">${e}</button>`
+).join("");
+
+document.getElementById("emojiSugestoes").addEventListener("click", (e) => {
+  const chip = e.target.closest(".emoji-chip");
+  if (!chip) return;
+  document.getElementById("categoriaIcone").value = chip.dataset.emoji;
+});
+
+let categoriaEditandoId = null;
+
+document.getElementById("btnNovaCategoria").addEventListener("click", () => abrirModalCategoria(null));
+
+function abrirModalCategoria(id) {
+  categoriaEditandoId = id;
+  const modal = document.getElementById("modalCategoria");
+  const titulo = document.getElementById("modalCategoriaTitulo");
+  const nomeInput = document.getElementById("categoriaNome");
+  const iconeInput = document.getElementById("categoriaIcone");
+
+  if (id) {
+    const cat = state.categorias.find((c) => String(c.id) === String(id));
+    titulo.textContent = "Editar categoria";
+    nomeInput.value = cat?.nome || "";
+    iconeInput.value = cat?.icone || "";
+  } else {
+    titulo.textContent = "Nova categoria";
+    nomeInput.value = "";
+    iconeInput.value = "";
+  }
+
+  modal.hidden = false;
+  nomeInput.focus();
+}
+
+function fecharModalCategoria() {
+  document.getElementById("modalCategoria").hidden = true;
+}
+
+document.getElementById("btnCancelarCategoria").addEventListener("click", fecharModalCategoria);
+document.getElementById("modalCategoriaBackdrop").addEventListener("click", fecharModalCategoria);
+
+document.getElementById("formCategoria").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const nome = document.getElementById("categoriaNome").value.trim();
+  const icone = document.getElementById("categoriaIcone").value.trim();
   if (!nome) return;
+
   try {
-    await apiAdmin("/api/admin/categorias", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nome }),
-    });
+    if (categoriaEditandoId) {
+      await apiAdmin(`/api/admin/categorias/${categoriaEditandoId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome, icone }),
+      });
+    } else {
+      await apiAdmin("/api/admin/categorias", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome, icone }),
+      });
+    }
+    fecharModalCategoria();
     carregarCardapio();
   } catch (err) {
     alert(err.message);
   }
 });
-
-async function renomearCategoria(id) {
-  const cat = state.categorias.find((c) => String(c.id) === String(id));
-  const nome = prompt("Novo nome da categoria:", cat?.nome || "");
-  if (!nome) return;
-  try {
-    await apiAdmin(`/api/admin/categorias/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nome }),
-    });
-    carregarCardapio();
-  } catch (err) {
-    alert(err.message);
-  }
-}
 
 async function excluirCategoria(id) {
   if (!confirm("Excluir esta categoria? Só é possível se ela estiver sem itens.")) return;
@@ -369,6 +431,7 @@ async function excluirCategoria(id) {
 
 const modal = document.getElementById("modalProduto");
 const formProduto = document.getElementById("formProduto");
+let fotoPosicaoAtual = "50% 50%";
 
 function preencherSelectCategorias(selecionadaId) {
   const select = document.getElementById("campoCategoria");
@@ -380,8 +443,11 @@ function preencherSelectCategorias(selecionadaId) {
 function abrirModal(produtoId, categoriaIdPadrao) {
   state.editandoId = produtoId;
   const preview = document.getElementById("previewFoto");
+  const hint = document.getElementById("hintFoto");
   document.getElementById("campoFoto").value = "";
   preview.hidden = true;
+  hint.hidden = true;
+  fotoPosicaoAtual = "50% 50%";
 
   if (produtoId) {
     const produto = state.categorias.flatMap((c) => c.produtos).find((p) => String(p.id) === String(produtoId));
@@ -392,8 +458,11 @@ function abrirModal(produtoId, categoriaIdPadrao) {
     document.getElementById("campoDisponivel").checked = !!produto.disponivel;
     preencherSelectCategorias(produto.categoria_id);
     if (produto.imagem) {
+      fotoPosicaoAtual = produto.imagem_pos || "50% 50%";
       preview.src = `/img/${produto.imagem}`;
+      preview.style.objectPosition = fotoPosicaoAtual;
       preview.hidden = false;
+      hint.hidden = false;
     }
   } else {
     document.getElementById("modalTitulo").textContent = "Novo item";
@@ -419,7 +488,19 @@ document.getElementById("campoFoto").addEventListener("change", (e) => {
   const preview = document.getElementById("previewFoto");
   if (!file) return;
   preview.src = URL.createObjectURL(file);
+  preview.style.objectPosition = "50% 50%";
+  fotoPosicaoAtual = "50% 50%";
   preview.hidden = false;
+  document.getElementById("hintFoto").hidden = false;
+});
+
+document.getElementById("previewFoto").addEventListener("click", (e) => {
+  const preview = e.target;
+  const rect = preview.getBoundingClientRect();
+  const x = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+  const y = Math.round(((e.clientY - rect.top) / rect.height) * 100);
+  fotoPosicaoAtual = `${x}% ${y}%`;
+  preview.style.objectPosition = fotoPosicaoAtual;
 });
 
 formProduto.addEventListener("submit", async (e) => {
@@ -431,6 +512,7 @@ formProduto.addEventListener("submit", async (e) => {
     preco: parseFloat(document.getElementById("campoPreco").value),
     categoria_id: document.getElementById("campoCategoria").value,
     disponivel: document.getElementById("campoDisponivel").checked,
+    imagem_pos: fotoPosicaoAtual,
   };
 
   try {
