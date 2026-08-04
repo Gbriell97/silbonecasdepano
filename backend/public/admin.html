@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Karla:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 <link rel="stylesheet" href="styles.css" />
 <link rel="stylesheet" href="admin.css" />
 </head>
@@ -53,7 +55,7 @@
 
     <div class="loja-field-group">
       <label>Fotos de capa (até 3)</label>
-      <p class="hint-reenquadrar">💡 Clique na foto para escolher o ponto de foco</p>
+      <p class="hint-reenquadrar">💡 Ao enviar, você vai poder recortar a foto antes de salvar</p>
       <div class="capas-grid">
         <div class="capa-slot">
           <img id="previewCapa1" class="preview-capa" hidden />
@@ -153,17 +155,33 @@
       Disponível no cardápio
     </label>
 
-    <label>Foto
-      <input type="file" id="campoFoto" accept="image/*" />
-    </label>
-    <img id="previewFoto" class="preview-foto" hidden />
-    <p class="hint-reenquadrar" id="hintFoto" hidden>💡 Clique na foto para escolher o ponto de foco</p>
+    <label>Fotos do produto</label>
+    <p class="hint-reenquadrar">💡 Você pode adicionar quantas fotos quiser. A primeira é a foto de capa.</p>
+    <div class="fotos-galeria" id="fotosGaleria"></div>
+    <button type="button" id="btnAddFoto" class="btn-nova-categoria" style="margin: 0;">+ Adicionar foto</button>
+    <p class="hint-reenquadrar" id="hintSalveAntes" hidden>💡 Salve o item uma vez pra poder adicionar fotos</p>
+    <input type="file" id="inputNovaFoto" accept="image/*" hidden />
 
     <div class="modal-actions">
       <button type="button" id="btnCancelar" class="btn-secundario">Cancelar</button>
       <button type="submit" class="btn-primario">Salvar</button>
     </div>
   </form>
+</div>
+
+<!-- Modal de recorte de imagem -->
+<div class="modal" id="modalCrop" hidden>
+  <div class="modal-backdrop" id="cropBackdrop"></div>
+  <div class="modal-box crop-box">
+    <h2>Ajustar foto</h2>
+    <div class="crop-container">
+      <img id="cropImage" />
+    </div>
+    <div class="modal-actions">
+      <button type="button" id="btnCropCancelar" class="btn-secundario">Cancelar</button>
+      <button type="button" id="btnCropConfirmar" class="btn-primario">Usar essa foto</button>
+    </div>
+  </div>
 </div>
 
 <script src="admin.js"></script>

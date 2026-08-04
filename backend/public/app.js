@@ -3,6 +3,8 @@ const state = {
   categorias: [],
   carrinho: {},
   busca: "",
+  galeriaFotos: [],
+  galeriaIndex: 0,
 };
 
 const fmt = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -141,10 +143,43 @@ function renderMenu(categorias) {
   );
 }
 
-function abrirFoto(src) {
-  document.getElementById("fotoAmpliada").src = src;
+function abrirFoto(produtoId) {
+  const produto = findProduto(produtoId);
+  const fotos = produto?.fotos?.length ? produto.fotos : produto?.imagem ? [{ arquivo: produto.imagem }] : [];
+  if (!fotos.length) return;
+
+  state.galeriaFotos = fotos;
+  state.galeriaIndex = 0;
+  mostrarFotoGaleria();
   document.getElementById("modalFoto").hidden = false;
 }
+
+function mostrarFotoGaleria() {
+  const fotos = state.galeriaFotos || [];
+  const i = state.galeriaIndex || 0;
+  if (!fotos[i]) return;
+  document.getElementById("fotoAmpliada").src = `/img/${fotos[i].arquivo}`;
+
+  const nav = document.getElementById("fotoNav");
+  if (nav) nav.hidden = fotos.length < 2;
+  const contador = document.getElementById("fotoContador");
+  if (contador) contador.textContent = fotos.length > 1 ? `${i + 1} / ${fotos.length}` : "";
+}
+
+function fotoAnterior() {
+  const fotos = state.galeriaFotos || [];
+  if (!fotos.length) return;
+  state.galeriaIndex = (state.galeriaIndex - 1 + fotos.length) % fotos.length;
+  mostrarFotoGaleria();
+}
+
+function fotoProxima() {
+  const fotos = state.galeriaFotos || [];
+  if (!fotos.length) return;
+  state.galeriaIndex = (state.galeriaIndex + 1) % fotos.length;
+  mostrarFotoGaleria();
+}
+
 function fecharFoto() {
   document.getElementById("modalFoto").hidden = true;
 }
@@ -152,13 +187,15 @@ function fecharFoto() {
 function productCardHTML(produto, categoria) {
   const item = state.carrinho[produto.id];
   const qtd = item ? item.quantidade : 0;
-  const posicao = produto.imagem_pos || "50% 50%";
+  const capa = produto.fotos?.[0] || (produto.imagem ? { arquivo: produto.imagem, posicao: produto.imagem_pos } : null);
+  const posicao = capa?.posicao || "50% 50%";
 
   return `
     <div class="product-card">
-      <div class="product-thumb" ${produto.imagem ? `data-foto="/img/${produto.imagem}"` : ""}>
+      <div class="product-thumb" ${capa ? `data-foto="${produto.id}"` : ""}>
         <span>${emojiFor(categoria)}</span>
-        ${produto.imagem ? `<img class="thumb-img" src="/img/${produto.imagem}" style="object-position: ${posicao}" onerror="this.remove()" />` : ""}
+        ${capa ? `<img class="thumb-img" src="/img/${capa.arquivo}" style="object-position: ${posicao}" onerror="this.remove()" />` : ""}
+        ${produto.fotos?.length > 1 ? `<span class="thumb-multi-badge">${produto.fotos.length} 📷</span>` : ""}
       </div>
       <div class="product-info">
         <h3>${produto.nome}</h3>
@@ -296,6 +333,8 @@ function bindGlobalEvents() {
   document.getElementById("ticketBackdrop").addEventListener("click", closeTicketFn);
   document.getElementById("fecharFoto").addEventListener("click", fecharFoto);
   document.getElementById("fotoBackdrop").addEventListener("click", fecharFoto);
+  document.getElementById("fotoAnterior").addEventListener("click", fotoAnterior);
+  document.getElementById("fotoProxima").addEventListener("click", fotoProxima);
 
   document.getElementById("searchInput").addEventListener("input", (e) => {
     state.busca = e.target.value.trim();

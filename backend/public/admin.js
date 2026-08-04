@@ -75,6 +75,58 @@ async function carregarTudo() {
   await Promise.all([carregarCardapio(), carregarPedidos(), carregarLoja()]);
 }
 
+// ---------- Recorte de imagem (usado em logo, capas e fotos de produto) ----------
+
+let cropperInstance = null;
+let cropOnConfirm = null;
+
+function abrirRecorte(arquivo, aspectRatio, onConfirmar) {
+  const modalEl = document.getElementById("modalCrop");
+  const img = document.getElementById("cropImage");
+  const reader = new FileReader();
+
+  reader.onload = (e) => {
+    img.src = e.target.result;
+    modalEl.hidden = false;
+
+    if (cropperInstance) cropperInstance.destroy();
+    cropperInstance = new Cropper(img, {
+      aspectRatio,
+      viewMode: 1,
+      autoCropArea: 1,
+      background: false,
+      responsive: true,
+    });
+  };
+  reader.readAsDataURL(arquivo);
+  cropOnConfirm = onConfirmar;
+}
+
+function fecharRecorte() {
+  document.getElementById("modalCrop").hidden = true;
+  if (cropperInstance) {
+    cropperInstance.destroy();
+    cropperInstance = null;
+  }
+  cropOnConfirm = null;
+}
+
+document.getElementById("btnCropCancelar").addEventListener("click", fecharRecorte);
+document.getElementById("cropBackdrop").addEventListener("click", fecharRecorte);
+
+document.getElementById("btnCropConfirmar").addEventListener("click", () => {
+  if (!cropperInstance || !cropOnConfirm) return;
+  const callback = cropOnConfirm;
+  cropperInstance.getCroppedCanvas({ maxWidth: 1400, maxHeight: 1400 }).toBlob(
+    (blob) => {
+      fecharRecorte();
+      callback(blob);
+    },
+    "image/jpeg",
+    0.9
+  );
+});
+
 // ---------- Aparência da loja ----------
 
 const ordemDias = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"];
@@ -195,39 +247,47 @@ document.getElementById("formLoja").addEventListener("submit", async (e) => {
 
 async function enviarImagemLoja(campo, arquivo) {
   const formData = new FormData();
-  formData.append("imagem", arquivo);
+  formData.append("imagem", arquivo, arquivo.name || "foto.jpg");
   return apiAdmin(`/api/admin/loja/imagem/${campo}`, { method: "POST", body: formData });
 }
 
-document.getElementById("inputLogo").addEventListener("change", async (e) => {
+document.getElementById("inputLogo").addEventListener("change", (e) => {
   const arquivo = e.target.files[0];
   if (!arquivo) return;
-  try {
-    await enviarImagemLoja("logo", arquivo);
-    document.getElementById("previewLogo").src = URL.createObjectURL(arquivo);
-    document.getElementById("previewLogo").hidden = false;
-    document.getElementById("previewLogoFallback").hidden = true;
-  } catch (err) {
-    alert("Erro ao enviar logo: " + err.message);
-  }
+  abrirRecorte(arquivo, 1, async (blob) => {
+    try {
+      await enviarImagemLoja("logo", blob);
+      document.getElementById("previewLogo").src = URL.createObjectURL(blob);
+      document.getElementById("previewLogo").hidden = false;
+      document.getElementById("previewLogoFallback").hidden = true;
+    } catch (err) {
+      alert("Erro ao enviar logo: " + err.message);
+    } finally {
+      e.target.value = "";
+    }
+  });
 });
 
 ["capa1", "capa2", "capa3"].forEach((campo, i) => {
-  document.getElementById(`input${campo[0].toUpperCase()}${campo.slice(1)}`).addEventListener("change", async (e) => {
+  document.getElementById(`input${campo[0].toUpperCase()}${campo.slice(1)}`).addEventListener("change", (e) => {
     const arquivo = e.target.files[0];
     if (!arquivo) return;
-    try {
-      await enviarImagemLoja(campo, arquivo);
-      const img = document.getElementById(`previewCapa${i + 1}`);
-      img.src = URL.createObjectURL(arquivo);
-      img.style.objectPosition = "50% 50%";
-      img.hidden = false;
-    } catch (err) {
-      alert("Erro ao enviar foto de capa: " + err.message);
-    }
+    abrirRecorte(arquivo, 16 / 9, async (blob) => {
+      try {
+        await enviarImagemLoja(campo, blob);
+        const img = document.getElementById(`previewCapa${i + 1}`);
+        img.src = URL.createObjectURL(blob);
+        img.style.objectPosition = "50% 50%";
+        img.hidden = false;
+      } catch (err) {
+        alert("Erro ao enviar foto de capa: " + err.message);
+      } finally {
+        e.target.value = "";
+      }
+    });
   });
 
-  // Clique na prévia da capa define o ponto de foco (reenquadramento)
+  // Clique na prévia da capa ainda permite ajustar o foco fino, se precisar
   const previewImg = document.getElementById(`previewCapa${i + 1}`);
   previewImg.addEventListener("click", async (e) => {
     const rect = previewImg.getBoundingClientRect();
@@ -345,7 +405,34 @@ function produtoRowHTML(p) {
 
 // ---------- Categorias ----------
 
-const EMOJI_SUGESTOES = ["🍔","🍕","🍟","🌭","🥪","🍗","🍖","🥩","🍛","🍜","🍝","🍲","🥘","🍱","🍣","🍤","🥗","🌮","🌯","🥙","🥟","🍳","🥚","🧀","🥐","🍞","🥖","🧁","🍰","🎂","🍮","🍨","🍦","🍩","🍪","🍫","🍬","🍭","🥤","☕","🧃","🧋","🍺","🍷","🍹","🥤","🧊","🍇","🍓","🍉","🍎","🍌","🥭","🍍","🥥","🌾","🍯","🐔","🥛","🎁"];
+const EMOJI_SUGESTOES = [
+  // Comidas salgadas
+  "🍔","🍕","🍟","🌭","🥪","🍗","🍖","🥩","🍛","🍜","🍝","🍲","🥘","🍱","🍣","🍤","🥗","🌮","🌯","🥙","🥟","🍳","🥚","🧀","🥐","🍞","🥖","🥨","🫓","🍚","🍙","🍘",
+  // Doces e sobremesas
+  "🧁","🍰","🎂","🍮","🍨","🍦","🍩","🍪","🍫","🍬","🍭","🥧","🍯",
+  // Bebidas
+  "☕","🧃","🧋","🍺","🍷","🍹","🍸","🍾","🥤","🧊","🍵","🥛",
+  // Frutas e hortifruti
+  "🍇","🍓","🍉","🍎","🍏","🍌","🥭","🍍","🥥","🍑","🍒","🍋","🍊","🥝","🥑","🍆","🥕","🌽","🥦","🥬","🥒","🌶️","🧄","🧅","🌾",
+  // Carnes e proteínas
+  "🐔","🐟","🥓",
+  // Artesanato, costura e bonecas
+  "🧵","🧶","🪡","🧸","🪆","👗","👘","🎀","🧦","🧤","🧣","👒","👜","👛","🎩","🩱","👶","🍼",
+  // Roupas e moda
+  "👕","👖","🩳","🥻","👔","👚","🩴","👟","👠","👞","💍","💄","💅",
+  // Casa e decoração
+  "🏠","🕯️","🪴","🖼️","🪑","🛋️","🧺","🧹","🧴","🧼","🪞","🛁","🔑",
+  // Papelaria e presentes
+  "🎁","🎈","📚","✏️","🖊️","📔","🎨","✂️",
+  // Pets
+  "🐶","🐱","🐰","🐾",
+  // Tecnologia e diversos
+  "📱","💻","⌚","🔋","🧰","🔧","🪛","🚗","🚲",
+  // Saúde e beleza
+  "💆","🧴","🧖","🌸","🌺","🌻","🌷","💐",
+  // Genéricos úteis
+  "⭐","🔥","✨","🆕","💯","🛍️","📦","🚀",
+];
 
 document.getElementById("emojiSugestoes").innerHTML = EMOJI_SUGESTOES.map(
   (e) => `<button type="button" class="emoji-chip" data-emoji="${e}">${e}</button>`
@@ -431,7 +518,6 @@ async function excluirCategoria(id) {
 
 const modal = document.getElementById("modalProduto");
 const formProduto = document.getElementById("formProduto");
-let fotoPosicaoAtual = "50% 50%";
 
 function preencherSelectCategorias(selecionadaId) {
   const select = document.getElementById("campoCategoria");
@@ -442,12 +528,6 @@ function preencherSelectCategorias(selecionadaId) {
 
 function abrirModal(produtoId, categoriaIdPadrao) {
   state.editandoId = produtoId;
-  const preview = document.getElementById("previewFoto");
-  const hint = document.getElementById("hintFoto");
-  document.getElementById("campoFoto").value = "";
-  preview.hidden = true;
-  hint.hidden = true;
-  fotoPosicaoAtual = "50% 50%";
 
   if (produtoId) {
     const produto = state.categorias.flatMap((c) => c.produtos).find((p) => String(p.id) === String(produtoId));
@@ -457,13 +537,9 @@ function abrirModal(produtoId, categoriaIdPadrao) {
     document.getElementById("campoPreco").value = produto.preco;
     document.getElementById("campoDisponivel").checked = !!produto.disponivel;
     preencherSelectCategorias(produto.categoria_id);
-    if (produto.imagem) {
-      fotoPosicaoAtual = produto.imagem_pos || "50% 50%";
-      preview.src = `/img/${produto.imagem}`;
-      preview.style.objectPosition = fotoPosicaoAtual;
-      preview.hidden = false;
-      hint.hidden = false;
-    }
+    renderFotosGaleria(produto.fotos || []);
+    document.getElementById("btnAddFoto").hidden = false;
+    document.getElementById("hintSalveAntes").hidden = true;
   } else {
     document.getElementById("modalTitulo").textContent = "Novo item";
     document.getElementById("campoNome").value = "";
@@ -471,6 +547,9 @@ function abrirModal(produtoId, categoriaIdPadrao) {
     document.getElementById("campoPreco").value = "";
     document.getElementById("campoDisponivel").checked = true;
     preencherSelectCategorias(categoriaIdPadrao);
+    renderFotosGaleria([]);
+    document.getElementById("btnAddFoto").hidden = true;
+    document.getElementById("hintSalveAntes").hidden = false;
   }
 
   modal.hidden = false;
@@ -483,25 +562,84 @@ function fecharModal() {
 document.getElementById("btnCancelar").addEventListener("click", fecharModal);
 document.getElementById("modalBackdrop").addEventListener("click", fecharModal);
 
-document.getElementById("campoFoto").addEventListener("change", (e) => {
-  const file = e.target.files[0];
-  const preview = document.getElementById("previewFoto");
-  if (!file) return;
-  preview.src = URL.createObjectURL(file);
-  preview.style.objectPosition = "50% 50%";
-  fotoPosicaoAtual = "50% 50%";
-  preview.hidden = false;
-  document.getElementById("hintFoto").hidden = false;
+// ---------- Galeria de fotos do produto ----------
+
+function renderFotosGaleria(fotos) {
+  const container = document.getElementById("fotosGaleria");
+  if (!fotos.length) {
+    container.innerHTML = "";
+    return;
+  }
+  container.innerHTML = fotos
+    .map(
+      (f, i) => `
+    <div class="foto-item">
+      ${i === 0 ? `<span class="foto-item-capa-badge">Capa</span>` : ""}
+      <img src="/img/${f.arquivo}" style="object-position: ${f.posicao || "50% 50%"}" />
+      <div class="foto-item-acoes">
+        ${i !== 0 ? `<button type="button" data-tornar-capa="${f.id}">Capa</button>` : ""}
+        <button type="button" class="remover" data-remover-foto="${f.id}">Excluir</button>
+      </div>
+    </div>
+  `
+    )
+    .join("");
+
+  container.querySelectorAll("[data-tornar-capa]").forEach((b) =>
+    b.addEventListener("click", () => tornarFotoCapa(b.dataset.tornarCapa))
+  );
+  container.querySelectorAll("[data-remover-foto]").forEach((b) =>
+    b.addEventListener("click", () => removerFotoProduto(b.dataset.removerFoto))
+  );
+}
+
+async function recarregarGaleriaAtual() {
+  await carregarCardapio();
+  const produto = state.categorias.flatMap((c) => c.produtos).find((p) => String(p.id) === String(state.editandoId));
+  renderFotosGaleria(produto?.fotos || []);
+}
+
+document.getElementById("btnAddFoto").addEventListener("click", () => {
+  if (!state.editandoId) return;
+  document.getElementById("inputNovaFoto").click();
 });
 
-document.getElementById("previewFoto").addEventListener("click", (e) => {
-  const preview = e.target;
-  const rect = preview.getBoundingClientRect();
-  const x = Math.round(((e.clientX - rect.left) / rect.width) * 100);
-  const y = Math.round(((e.clientY - rect.top) / rect.height) * 100);
-  fotoPosicaoAtual = `${x}% ${y}%`;
-  preview.style.objectPosition = fotoPosicaoAtual;
+document.getElementById("inputNovaFoto").addEventListener("change", (e) => {
+  const arquivo = e.target.files[0];
+  if (!arquivo || !state.editandoId) return;
+
+  abrirRecorte(arquivo, 1.3, async (blob) => {
+    try {
+      const formData = new FormData();
+      formData.append("imagem", blob, "foto.jpg");
+      await apiAdmin(`/api/admin/produtos/${state.editandoId}/fotos`, { method: "POST", body: formData });
+      await recarregarGaleriaAtual();
+    } catch (err) {
+      alert("Erro ao enviar foto: " + err.message);
+    } finally {
+      e.target.value = "";
+    }
+  });
 });
+
+async function tornarFotoCapa(fotoId) {
+  try {
+    await apiAdmin(`/api/admin/produtos/${state.editandoId}/fotos/${fotoId}/tornar-capa`, { method: "POST" });
+    await recarregarGaleriaAtual();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function removerFotoProduto(fotoId) {
+  if (!confirm("Excluir essa foto?")) return;
+  try {
+    await apiAdmin(`/api/admin/produtos/${state.editandoId}/fotos/${fotoId}`, { method: "DELETE" });
+    await recarregarGaleriaAtual();
+  } catch (err) {
+    alert(err.message);
+  }
+}
 
 formProduto.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -512,40 +650,30 @@ formProduto.addEventListener("submit", async (e) => {
     preco: parseFloat(document.getElementById("campoPreco").value),
     categoria_id: document.getElementById("campoCategoria").value,
     disponivel: document.getElementById("campoDisponivel").checked,
-    imagem_pos: fotoPosicaoAtual,
   };
 
   try {
-    let produtoId = state.editandoId;
-
-    if (produtoId) {
-      await apiAdmin(`/api/admin/produtos/${produtoId}`, {
+    if (state.editandoId) {
+      await apiAdmin(`/api/admin/produtos/${state.editandoId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dados),
       });
+      fecharModal();
+      carregarCardapio();
     } else {
+      // Cria o item primeiro; mantém o modal aberto pra já permitir adicionar fotos
       const criado = await apiAdmin("/api/admin/produtos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dados),
       });
-      produtoId = criado.id;
+      state.editandoId = criado.id;
+      document.getElementById("modalTitulo").textContent = "Editar item — agora adicione fotos!";
+      document.getElementById("btnAddFoto").hidden = false;
+      document.getElementById("hintSalveAntes").hidden = true;
+      await carregarCardapio();
     }
-
-    // Envia a foto, se uma nova foi escolhida
-    const arquivo = document.getElementById("campoFoto").files[0];
-    if (arquivo) {
-      const formData = new FormData();
-      formData.append("imagem", arquivo);
-      await apiAdmin(`/api/admin/produtos/${produtoId}/imagem`, {
-        method: "POST",
-        body: formData,
-      });
-    }
-
-    fecharModal();
-    carregarCardapio();
   } catch (err) {
     alert("Erro ao salvar: " + err.message);
   }

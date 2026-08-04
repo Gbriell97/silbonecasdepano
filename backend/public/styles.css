@@ -490,6 +490,50 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; }
   cursor: pointer;
 }
 
+.foto-nav {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+.foto-nav-btn {
+  pointer-events: auto;
+  background: rgba(0,0,0,0.45);
+  border: none;
+  color: #fff;
+  font-size: 1.8rem;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  cursor: pointer;
+  line-height: 1;
+  margin: 0 6px;
+}
+
+.foto-contador {
+  position: absolute;
+  bottom: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,0.8);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.thumb-multi-badge {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
 .product-thumb { cursor: zoom-in; }
 
 /* ---------- Barra inferior ---------- */

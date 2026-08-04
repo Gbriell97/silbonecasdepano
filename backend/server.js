@@ -27,9 +27,16 @@ const CONFIG = {
   adminSenha: process.env.ADMIN_SENHA || "admin123",
 };
 
-// Pasta onde as fotos enviadas pelo admin são salvas
-const imgDir = path.join(__dirname, "public", "img");
+// Pasta onde as fotos enviadas pelo admin são salvas.
+// Se DATA_DIR estiver definida (disco persistente do Render), as fotos ficam lá
+// e sobrevivem a novos deploys. Caso contrário, usa public/img (só para desenvolvimento).
+const imgDir = process.env.DATA_DIR
+  ? path.join(process.env.DATA_DIR, "uploads")
+  : path.join(__dirname, "public", "img");
 if (!fs.existsSync(imgDir)) fs.mkdirSync(imgDir, { recursive: true });
+
+// Serve as fotos enviadas em /img/... (funciona tanto em disco local quanto persistente)
+app.use("/img", express.static(imgDir));
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -92,6 +99,27 @@ function calcularAberto(configLoja) {
   return minutosAgora >= minutosInicio || minutosAgora < minutosFim;
 }
 
+// Busca as fotos de uma lista de produtos e as anexa em cada um (campo "fotos")
+function anexarFotos(produtos) {
+  if (!produtos.length) return produtos;
+  const ids = produtos.map((p) => p.id);
+  const placeholders = ids.map(() => "?").join(",");
+  const todasFotos = db
+    .prepare(`SELECT * FROM produto_fotos WHERE produto_id IN (${placeholders}) ORDER BY ordem ASC, id ASC`)
+    .all(...ids);
+
+  return produtos.map((p) => {
+    const fotos = todasFotos.filter((f) => f.produto_id === p.id);
+    return {
+      ...p,
+      fotos,
+      // Mantidos para compatibilidade: primeira foto vira a "capa"
+      imagem: fotos[0]?.arquivo || p.imagem || null,
+      imagem_pos: fotos[0]?.posicao || p.imagem_pos || "50% 50%",
+    };
+  });
+}
+
 // ---------- Rotas públicas ----------
 
 app.get("/api/loja", (req, res) => {
@@ -124,7 +152,7 @@ app.get("/api/loja", (req, res) => {
 
 app.get("/api/cardapio", (req, res) => {
   const categorias = db.prepare("SELECT * FROM categorias ORDER BY ordem").all();
-  const produtos = db.prepare("SELECT * FROM produtos WHERE disponivel = 1").all();
+  const produtos = anexarFotos(db.prepare("SELECT * FROM produtos WHERE disponivel = 1").all());
 
   const resultado = categorias.map((cat) => ({
     ...cat,
@@ -242,7 +270,7 @@ app.get("/api/admin/pedidos", checarSenhaAdmin, (req, res) => {
 // Cardápio completo (inclui itens indisponíveis, para o admin poder reativar)
 app.get("/api/admin/cardapio", checarSenhaAdmin, (req, res) => {
   const categorias = db.prepare("SELECT * FROM categorias ORDER BY ordem").all();
-  const produtos = db.prepare("SELECT * FROM produtos").all();
+  const produtos = anexarFotos(db.prepare("SELECT * FROM produtos").all());
   const resultado = categorias.map((cat) => ({
     ...cat,
     produtos: produtos.filter((p) => p.categoria_id === cat.id),
@@ -314,25 +342,55 @@ app.put("/api/admin/produtos/:id", checarSenhaAdmin, (req, res) => {
 });
 
 app.delete("/api/admin/produtos/:id", checarSenhaAdmin, (req, res) => {
+  const fotos = db.prepare("SELECT * FROM produto_fotos WHERE produto_id = ?").all(req.params.id);
+  fotos.forEach((f) => {
+    const caminho = path.join(imgDir, f.arquivo);
+    if (fs.existsSync(caminho)) fs.unlinkSync(caminho);
+  });
+  db.prepare("DELETE FROM produto_fotos WHERE produto_id = ?").run(req.params.id);
   db.prepare("DELETE FROM produtos WHERE id = ?").run(req.params.id);
   res.json({ ok: true });
 });
 
-// Upload de foto do produto
-app.post("/api/admin/produtos/:id/imagem", checarSenhaAdmin, upload.single("imagem"), (req, res) => {
+// --- Fotos do produto (galeria com múltiplas fotos) ---
+
+// Adiciona uma nova foto ao produto (pode ser chamada várias vezes)
+app.post("/api/admin/produtos/:id/fotos", checarSenhaAdmin, upload.single("imagem"), (req, res) => {
   if (!req.file) return res.status(400).json({ erro: "Nenhum arquivo enviado." });
 
   const produto = db.prepare("SELECT * FROM produtos WHERE id = ?").get(req.params.id);
   if (!produto) return res.status(404).json({ erro: "Produto não encontrado." });
 
-  // Remove a foto antiga, se existir e for um upload anterior
-  if (produto.imagem) {
-    const antiga = path.join(imgDir, produto.imagem);
-    if (fs.existsSync(antiga)) fs.unlinkSync(antiga);
-  }
+  const ordemMax = db.prepare("SELECT MAX(ordem) AS m FROM produto_fotos WHERE produto_id = ?").get(req.params.id).m;
+  const proximaOrdem = ordemMax === null ? 0 : ordemMax + 1;
 
-  db.prepare("UPDATE produtos SET imagem = ? WHERE id = ?").run(req.file.filename, req.params.id);
-  res.json({ ok: true, imagem: req.file.filename });
+  const info = db
+    .prepare("INSERT INTO produto_fotos (produto_id, arquivo, posicao, ordem) VALUES (?, ?, '50% 50%', ?)")
+    .run(req.params.id, req.file.filename, proximaOrdem);
+
+  res.json({ id: info.lastInsertRowid, arquivo: req.file.filename, posicao: "50% 50%", ordem: proximaOrdem });
+});
+
+// Remove uma foto específica do produto
+app.delete("/api/admin/produtos/:id/fotos/:fotoId", checarSenhaAdmin, (req, res) => {
+  const foto = db.prepare("SELECT * FROM produto_fotos WHERE id = ? AND produto_id = ?").get(req.params.fotoId, req.params.id);
+  if (!foto) return res.status(404).json({ erro: "Foto não encontrada." });
+
+  const caminho = path.join(imgDir, foto.arquivo);
+  if (fs.existsSync(caminho)) fs.unlinkSync(caminho);
+
+  db.prepare("DELETE FROM produto_fotos WHERE id = ?").run(req.params.fotoId);
+  res.json({ ok: true });
+});
+
+// Define uma foto como a principal (capa) do produto
+app.post("/api/admin/produtos/:id/fotos/:fotoId/tornar-capa", checarSenhaAdmin, (req, res) => {
+  const foto = db.prepare("SELECT * FROM produto_fotos WHERE id = ? AND produto_id = ?").get(req.params.fotoId, req.params.id);
+  if (!foto) return res.status(404).json({ erro: "Foto não encontrada." });
+
+  const ordemMin = db.prepare("SELECT MIN(ordem) AS m FROM produto_fotos WHERE produto_id = ?").get(req.params.id).m;
+  db.prepare("UPDATE produto_fotos SET ordem = ? WHERE id = ?").run((ordemMin ?? 0) - 1, req.params.fotoId);
+  res.json({ ok: true });
 });
 
 // --- Configuração da loja (capa, logo, cores, horário) ---

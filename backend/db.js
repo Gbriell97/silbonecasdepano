@@ -2,8 +2,9 @@ const path = require("path");
 const fs = require("fs");
 const Database = require("better-sqlite3");
 
-// Garante que a pasta "data" existe antes de criar o banco
-const dataDir = path.join(__dirname, "data");
+// Se DATA_DIR estiver definida (ex: disco persistente do Render), usa ela.
+// Caso contrário, usa a pasta local "data" (só para desenvolvimento).
+const dataDir = process.env.DATA_DIR || path.join(__dirname, "data");
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
@@ -60,6 +61,15 @@ CREATE TABLE IF NOT EXISTS loja_config (
   sempre_aberto INTEGER NOT NULL DEFAULT 1,
   horarios_json TEXT NOT NULL DEFAULT '{}'
 );
+
+CREATE TABLE IF NOT EXISTS produto_fotos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  produto_id INTEGER NOT NULL,
+  arquivo TEXT NOT NULL,
+  posicao TEXT NOT NULL DEFAULT '50% 50%',
+  ordem INTEGER NOT NULL DEFAULT 0,
+  FOREIGN KEY (produto_id) REFERENCES produtos(id)
+);
 `);
 
 // Migrações leves: adiciona colunas novas em bancos já existentes (versões antigas do app)
@@ -75,6 +85,22 @@ tentarAdicionarColuna("produtos", "imagem_pos TEXT NOT NULL DEFAULT '50% 50%'");
 tentarAdicionarColuna("loja_config", "capa1_pos TEXT NOT NULL DEFAULT '50% 50%'");
 tentarAdicionarColuna("loja_config", "capa2_pos TEXT NOT NULL DEFAULT '50% 50%'");
 tentarAdicionarColuna("loja_config", "capa3_pos TEXT NOT NULL DEFAULT '50% 50%'");
+
+// Migra fotos que já estavam no campo antigo "imagem" para a nova tabela produto_fotos,
+// caso ainda não tenham sido migradas (garante compatibilidade com bancos já em uso)
+const produtosComFotoAntiga = db
+  .prepare("SELECT id, imagem, imagem_pos FROM produtos WHERE imagem IS NOT NULL AND imagem != ''")
+  .all();
+for (const produto of produtosComFotoAntiga) {
+  const jaTemFoto = db.prepare("SELECT COUNT(*) AS c FROM produto_fotos WHERE produto_id = ?").get(produto.id).c;
+  if (!jaTemFoto) {
+    db.prepare("INSERT INTO produto_fotos (produto_id, arquivo, posicao, ordem) VALUES (?, ?, ?, 0)").run(
+      produto.id,
+      produto.imagem,
+      produto.imagem_pos || "50% 50%"
+    );
+  }
+}
 
 // Seed da configuração da loja (linha única, id fixo = 1)
 const configExiste = db.prepare("SELECT COUNT(*) AS c FROM loja_config WHERE id = 1").get().c;
