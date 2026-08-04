@@ -1,5 +1,18 @@
 [hidden] { display: none !important; }
 
+:root {
+  --bg: #1c1712;
+  --bg-alt: #241d16;
+  --card: #2b2318;
+  --card-border: #3c3122;
+  --mustard: #e8a33d;
+  --red: #c1432d;
+  --cream: #f5efe2;
+  --muted: #b3a68e;
+  --paper: #f2ead9;
+  --paper-ink: #241d16;
+}
+
 .admin-body { padding-bottom: 40px; }
 
 /* ---- Login ---- */
@@ -299,7 +312,7 @@
   max-height: 88vh;
   overflow-y: auto;
 }
-.modal-box h2 { margin: 0 0 6px; font-size: 1.2rem; }
+.modal-box h2 { margin: 0 0 6px; font-size: 1.2rem; color: var(--paper-ink); }
 .modal-box label {
   font-size: 0.75rem;
   font-weight: 700;
