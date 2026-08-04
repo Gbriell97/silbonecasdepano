@@ -97,10 +97,28 @@ function abrirRecorte(arquivo, aspectRatio, onConfirmar) {
       background: false,
       responsive: true,
     });
+
+    // Marca o botão de formato correspondente como ativo (ou "Livre", se não bater com nenhum)
+    const chips = document.querySelectorAll("#cropFormatos .formato-chip");
+    chips.forEach((chip) => {
+      const valor = chip.dataset.ratio === "livre" ? NaN : parseFloat(chip.dataset.ratio);
+      const bate = isNaN(aspectRatio) ? isNaN(valor) : Math.abs(valor - aspectRatio) < 0.01;
+      chip.classList.toggle("active", bate);
+    });
   };
   reader.readAsDataURL(arquivo);
   cropOnConfirm = onConfirmar;
 }
+
+document.querySelectorAll("#cropFormatos .formato-chip").forEach((chip) => {
+  chip.addEventListener("click", () => {
+    if (!cropperInstance) return;
+    const valor = chip.dataset.ratio === "livre" ? NaN : parseFloat(chip.dataset.ratio);
+    cropperInstance.setAspectRatio(valor);
+    document.querySelectorAll("#cropFormatos .formato-chip").forEach((c) => c.classList.remove("active"));
+    chip.classList.add("active");
+  });
+});
 
 function fecharRecorte() {
   document.getElementById("modalCrop").hidden = true;
@@ -272,7 +290,7 @@ document.getElementById("inputLogo").addEventListener("change", (e) => {
   document.getElementById(`input${campo[0].toUpperCase()}${campo.slice(1)}`).addEventListener("change", (e) => {
     const arquivo = e.target.files[0];
     if (!arquivo) return;
-    abrirRecorte(arquivo, 16 / 9, async (blob) => {
+    abrirRecorte(arquivo, 4 / 3, async (blob) => {
       try {
         await enviarImagemLoja(campo, blob);
         const img = document.getElementById(`previewCapa${i + 1}`);
@@ -608,7 +626,7 @@ document.getElementById("inputNovaFoto").addEventListener("change", (e) => {
   const arquivo = e.target.files[0];
   if (!arquivo || !state.editandoId) return;
 
-  abrirRecorte(arquivo, 1.3, async (blob) => {
+  abrirRecorte(arquivo, NaN, async (blob) => {
     try {
       const formData = new FormData();
       formData.append("imagem", blob, "foto.jpg");

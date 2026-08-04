@@ -34,6 +34,8 @@ async function init() {
   state.loja = loja;
   document.title = loja.nome;
   document.documentElement.style.setProperty("--cor-primaria", loja.corPrimaria || "#2f6b3a");
+  const themeMeta = document.getElementById("themeColorMeta");
+  if (themeMeta) themeMeta.content = loja.corPrimaria || "#2f6b3a";
 
   renderCapa(loja);
   renderStoreCard(loja);
@@ -62,10 +64,13 @@ function renderStoreCard(loja) {
   const logo = document.getElementById("storeLogo");
   const fallback = document.getElementById("storeLogoFallback");
   if (loja.logo) {
+    logo.onerror = () => { logo.hidden = true; fallback.hidden = false; };
     logo.src = `/img/${loja.logo}`;
     logo.hidden = false;
     fallback.hidden = true;
-    logo.onerror = () => { logo.hidden = true; fallback.hidden = false; };
+  } else {
+    logo.hidden = true;
+    fallback.hidden = false;
   }
 
   const statusDot = document.getElementById("statusDot");
