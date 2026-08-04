@@ -1,3 +1,5 @@
+[hidden] { display: none !important; }
+
 :root {
   --cor-primaria: #2f6b3a;
   --cor-primaria-escura: #214e29;

@@ -1,3 +1,5 @@
+[hidden] { display: none !important; }
+
 .admin-body { padding-bottom: 40px; }
 
 /* ---- Login ---- */
@@ -57,6 +59,30 @@
 }
 .admin-header h1 { color: var(--mustard); font-size: 1.5rem; text-transform: uppercase; margin: 0; }
 .admin-header-actions { display: flex; gap: 10px; }
+
+.admin-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--card-border);
+  overflow-x: auto;
+}
+.admin-tab {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 10px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+}
+.admin-tab.active { color: var(--mustard); border-bottom-color: var(--mustard); }
+
+.tab-titulo { color: var(--mustard); font-size: 1.1rem; text-transform: uppercase; margin: 0 0 14px; }
 
 .btn-link {
   background: var(--card);

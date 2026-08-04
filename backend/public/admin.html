@@ -35,14 +35,29 @@
     </div>
   </header>
 
-  <div class="admin-content" id="adminContent">
-    <p class="loading">Carregando...</p>
-  </div>
+  <nav class="admin-tabs" id="adminTabs">
+    <button type="button" class="admin-tab active" data-tab="cardapio">🍽️ Cardápio</button>
+    <button type="button" class="admin-tab" data-tab="pedidos">🧾 Pedidos</button>
+    <button type="button" class="admin-tab" data-tab="aparencia">🎨 Aparência</button>
+  </nav>
 
-  <button id="btnNovaCategoria" class="btn-nova-categoria">+ Nova categoria</button>
+  <!-- Aba: Cardápio -->
+  <section class="admin-tab-panel" id="painelCardapio">
+    <div class="admin-content" id="adminContent">
+      <p class="loading">Carregando...</p>
+    </div>
+    <button id="btnNovaCategoria" class="btn-nova-categoria">+ Nova categoria</button>
+  </section>
 
-  <section class="loja-section">
-    <h2>Aparência da loja</h2>
+  <!-- Aba: Pedidos -->
+  <section class="admin-tab-panel" id="painelPedidos" hidden>
+    <h2 class="tab-titulo">Últimos pedidos</h2>
+    <div id="listaPedidos"><p class="loading">Carregando pedidos...</p></div>
+  </section>
+
+  <!-- Aba: Aparência -->
+  <section class="admin-tab-panel" id="painelAparencia" hidden>
+    <h2 class="tab-titulo">Aparência da loja</h2>
 
     <div class="loja-field-group">
       <label>Logomarca</label>
@@ -101,11 +116,6 @@
 
       <button type="submit" class="btn-primario">Salvar aparência</button>
     </form>
-  </section>
-
-  <section class="pedidos-section">
-    <h2>Últimos pedidos</h2>
-    <div id="listaPedidos"><p class="loading">Carregando pedidos...</p></div>
   </section>
 </div>
 

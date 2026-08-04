@@ -69,6 +69,29 @@ function mostrarPainel() {
   carregarTudo();
 }
 
+// ---------- Navegação por abas ----------
+
+const PAINEIS = {
+  cardapio: "painelCardapio",
+  pedidos: "painelPedidos",
+  aparencia: "painelAparencia",
+};
+
+document.querySelectorAll("#adminTabs .admin-tab").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const aba = btn.dataset.tab;
+
+    document.querySelectorAll("#adminTabs .admin-tab").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    Object.entries(PAINEIS).forEach(([nome, id]) => {
+      document.getElementById(id).hidden = nome !== aba;
+    });
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+});
+
 // ---------- Carregar dados ----------
 
 async function carregarTudo() {
