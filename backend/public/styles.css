@@ -172,6 +172,66 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; }
   color: var(--text);
 }
 
+/* ---------- Depoimentos ---------- */
+
+.depoimentos { padding: 4px 0 16px; }
+
+.depoimentos-titulo {
+  font-size: 0.95rem;
+  color: var(--text);
+  text-transform: uppercase;
+  margin: 0 0 10px;
+  padding: 0 16px;
+}
+
+.depoimentos-scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 0 16px 4px;
+  scrollbar-width: none;
+}
+.depoimentos-scroll::-webkit-scrollbar { display: none; }
+
+.depoimento-card {
+  flex: 0 0 auto;
+  width: 200px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.depoimento-card img {
+  width: 100%;
+  height: 130px;
+  object-fit: cover;
+}
+.depoimento-sem-foto {
+  width: 100%;
+  height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  background: linear-gradient(135deg, #efeadb, #e2ddc9);
+}
+.depoimento-texto {
+  font-size: 0.78rem;
+  color: var(--text);
+  padding: 10px 10px 4px;
+  margin: 0;
+  line-height: 1.35;
+  font-style: italic;
+}
+.depoimento-nome {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 700;
+  padding: 0 10px 10px;
+}
+
 /* ---------- Categorias ---------- */
 
 .cat-grid {
@@ -267,6 +327,18 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; }
 .product-info { padding: 9px 10px 10px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
 .product-info h3 { font-size: 0.85rem; font-weight: 700; line-height: 1.2; }
 .product-info p { margin: 0; font-size: 0.72rem; color: var(--muted); line-height: 1.3; min-height: 1.3em; }
+
+.selo-entrega {
+  align-self: flex-start;
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+.selo-entrega.pronta { background: #e3f3e6; color: #2f6b3a; }
+.selo-entrega.encomenda { background: #fdf0dd; color: #b5720a; }
 
 .product-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: auto; }
 .product-price { color: var(--cor-primaria); font-weight: 800; font-size: 0.85rem; }

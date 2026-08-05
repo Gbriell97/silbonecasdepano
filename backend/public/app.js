@@ -26,9 +26,10 @@ const diasSemana = { dom: "Domingo", seg: "Segunda", ter: "Terça", qua: "Quarta
 const ordemDias = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"];
 
 async function init() {
-  const [loja, cardapio] = await Promise.all([
+  const [loja, cardapio, depoimentos] = await Promise.all([
     fetch("/api/loja").then((r) => r.json()),
     fetch("/api/cardapio").then((r) => r.json()),
+    fetch("/api/depoimentos").then((r) => r.json()).catch(() => []),
   ]);
 
   state.loja = loja;
@@ -39,11 +40,33 @@ async function init() {
 
   renderCapa(loja);
   renderStoreCard(loja);
+  renderDepoimentos(depoimentos);
 
   state.categorias = cardapio;
   renderNav(cardapio);
   renderMenu(cardapio);
   bindGlobalEvents();
+}
+
+function renderDepoimentos(depoimentos) {
+  const section = document.getElementById("depoimentosSection");
+  if (!depoimentos || !depoimentos.length) {
+    section.hidden = true;
+    return;
+  }
+
+  section.hidden = false;
+  document.getElementById("depoimentosLista").innerHTML = depoimentos
+    .map(
+      (d) => `
+    <div class="depoimento-card">
+      ${d.foto ? `<img src="/img/${d.foto}" alt="Trabalho realizado" onerror="this.remove()" />` : `<div class="depoimento-sem-foto">🧵</div>`}
+      <p class="depoimento-texto">${d.texto ? `"${d.texto}"` : ""}</p>
+      <span class="depoimento-nome">— ${d.nome_cliente}</span>
+    </div>
+  `
+    )
+    .join("");
 }
 
 function renderCapa(loja) {
@@ -195,6 +218,11 @@ function productCardHTML(produto, categoria) {
   const capa = produto.fotos?.[0] || (produto.imagem ? { arquivo: produto.imagem, posicao: produto.imagem_pos } : null);
   const posicao = capa?.posicao || "50% 50%";
 
+  const selo =
+    produto.tipo_entrega === "encomenda"
+      ? `<span class="selo-entrega encomenda">Sob encomenda${produto.prazo_producao ? ` · ${produto.prazo_producao}` : ""}</span>`
+      : `<span class="selo-entrega pronta">Pronta entrega</span>`;
+
   return `
     <div class="product-card">
       <div class="product-thumb" ${capa ? `data-foto="${produto.id}"` : ""}>
@@ -203,6 +231,7 @@ function productCardHTML(produto, categoria) {
         ${produto.fotos?.length > 1 ? `<span class="thumb-multi-badge">${produto.fotos.length} 📷</span>` : ""}
       </div>
       <div class="product-info">
+        ${selo}
         <h3>${produto.nome}</h3>
         <p>${produto.descricao || ""}</p>
         <div class="product-bottom">

@@ -38,6 +38,7 @@
   <nav class="admin-tabs" id="adminTabs">
     <button type="button" class="admin-tab active" data-tab="cardapio">🍽️ Cardápio</button>
     <button type="button" class="admin-tab" data-tab="pedidos">🧾 Pedidos</button>
+    <button type="button" class="admin-tab" data-tab="depoimentos">📸 Depoimentos</button>
     <button type="button" class="admin-tab" data-tab="aparencia">🎨 Aparência</button>
   </nav>
 
@@ -53,6 +54,24 @@
   <section class="admin-tab-panel" id="painelPedidos" hidden>
     <h2 class="tab-titulo">Últimos pedidos</h2>
     <div id="listaPedidos"><p class="loading">Carregando pedidos...</p></div>
+  </section>
+
+  <!-- Aba: Depoimentos -->
+  <section class="admin-tab-panel" id="painelDepoimentos" hidden>
+    <h2 class="tab-titulo">Galeria de trabalhos e depoimentos</h2>
+    <p class="hint-reenquadrar">💡 Mostre fotos de trabalhos entregues e o que seus clientes disseram. Aparece no site antes do cardápio.</p>
+
+    <div class="depoimentos-admin-lista" id="depoimentosAdminLista"></div>
+
+    <form id="formNovoDepoimento" class="loja-form" style="margin-top: 16px;">
+      <label>Nome do cliente
+        <input type="text" id="depoNomeCliente" placeholder="Ex: Maria S." required />
+      </label>
+      <label>Depoimento (opcional)
+        <textarea id="depoTexto" rows="2" placeholder="O que o cliente disse sobre o trabalho"></textarea>
+      </label>
+      <button type="submit" class="btn-primario">+ Adicionar depoimento</button>
+    </form>
   </section>
 
   <!-- Aba: Aparência -->
@@ -163,6 +182,16 @@
     <label class="checkbox-label">
       <input type="checkbox" id="campoDisponivel" checked />
       Disponível no cardápio
+    </label>
+
+    <label>Tipo de entrega
+      <select id="campoTipoEntrega">
+        <option value="pronta">Pronta entrega</option>
+        <option value="encomenda">Sob encomenda</option>
+      </select>
+    </label>
+    <label id="campoPrazoWrapper" hidden>Prazo de produção
+      <input type="text" id="campoPrazo" placeholder="Ex: 15 dias úteis" />
     </label>
 
     <label>Fotos do produto</label>

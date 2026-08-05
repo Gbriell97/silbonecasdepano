@@ -60,6 +60,17 @@ const uploadLoja = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
 
+const uploadDepoimento = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, imgDir),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname) || ".jpg";
+      cb(null, `depoimento-${req.params.id}-${Date.now()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+});
+
 // Protege todas as rotas /api/admin/* com senha (enviada no header x-admin-senha)
 function checarSenhaAdmin(req, res, next) {
   const senha = req.headers["x-admin-senha"];
@@ -312,23 +323,25 @@ app.delete("/api/admin/categorias/:id", checarSenhaAdmin, (req, res) => {
 
 // --- Produtos ---
 app.post("/api/admin/produtos", checarSenhaAdmin, (req, res) => {
-  const { categoria_id, nome, descricao, preco } = req.body;
+  const { categoria_id, nome, descricao, preco, tipo_entrega, prazo_producao } = req.body;
   if (!categoria_id || !nome || preco === undefined) {
     return res.status(400).json({ erro: "Categoria, nome e preço são obrigatórios." });
   }
   const info = db
-    .prepare("INSERT INTO produtos (categoria_id, nome, descricao, preco, disponivel) VALUES (?, ?, ?, ?, 1)")
-    .run(categoria_id, nome, descricao || "", preco);
+    .prepare(
+      "INSERT INTO produtos (categoria_id, nome, descricao, preco, disponivel, tipo_entrega, prazo_producao) VALUES (?, ?, ?, ?, 1, ?, ?)"
+    )
+    .run(categoria_id, nome, descricao || "", preco, tipo_entrega || "pronta", prazo_producao || "");
   res.json({ id: info.lastInsertRowid });
 });
 
 app.put("/api/admin/produtos/:id", checarSenhaAdmin, (req, res) => {
-  const { categoria_id, nome, descricao, preco, disponivel, imagem_pos } = req.body;
+  const { categoria_id, nome, descricao, preco, disponivel, imagem_pos, tipo_entrega, prazo_producao } = req.body;
   const atual = db.prepare("SELECT * FROM produtos WHERE id = ?").get(req.params.id);
   if (!atual) return res.status(404).json({ erro: "Produto não encontrado." });
 
   db.prepare(
-    `UPDATE produtos SET categoria_id = ?, nome = ?, descricao = ?, preco = ?, disponivel = ?, imagem_pos = ? WHERE id = ?`
+    `UPDATE produtos SET categoria_id = ?, nome = ?, descricao = ?, preco = ?, disponivel = ?, imagem_pos = ?, tipo_entrega = ?, prazo_producao = ? WHERE id = ?`
   ).run(
     categoria_id ?? atual.categoria_id,
     nome ?? atual.nome,
@@ -336,6 +349,8 @@ app.put("/api/admin/produtos/:id", checarSenhaAdmin, (req, res) => {
     preco ?? atual.preco,
     disponivel !== undefined ? (disponivel ? 1 : 0) : atual.disponivel,
     imagem_pos ?? atual.imagem_pos,
+    tipo_entrega ?? atual.tipo_entrega,
+    prazo_producao ?? atual.prazo_producao,
     req.params.id
   );
   res.json({ ok: true });
@@ -452,6 +467,69 @@ app.put("/api/admin/loja/posicao/:campo", checarSenhaAdmin, (req, res) => {
 
   db.prepare(`UPDATE loja_config SET ${req.params.campo}_pos = ? WHERE id = 1`).run(posicao);
   res.json({ ok: true });
+});
+
+// ---------- Depoimentos / Galeria de trabalhos ----------
+
+app.get("/api/depoimentos", (req, res) => {
+  const depoimentos = db.prepare("SELECT * FROM depoimentos ORDER BY ordem ASC, id ASC").all();
+  res.json(depoimentos);
+});
+
+app.get("/api/admin/depoimentos", checarSenhaAdmin, (req, res) => {
+  const depoimentos = db.prepare("SELECT * FROM depoimentos ORDER BY ordem ASC, id ASC").all();
+  res.json(depoimentos);
+});
+
+app.post("/api/admin/depoimentos", checarSenhaAdmin, (req, res) => {
+  const { nome_cliente, texto } = req.body;
+  if (!nome_cliente) return res.status(400).json({ erro: "Nome do cliente é obrigatório." });
+
+  const ordemMax = db.prepare("SELECT MAX(ordem) AS m FROM depoimentos").get().m;
+  const proximaOrdem = ordemMax === null ? 0 : ordemMax + 1;
+
+  const info = db
+    .prepare("INSERT INTO depoimentos (nome_cliente, texto, ordem) VALUES (?, ?, ?)")
+    .run(nome_cliente, texto || "", proximaOrdem);
+  res.json({ id: info.lastInsertRowid });
+});
+
+app.put("/api/admin/depoimentos/:id", checarSenhaAdmin, (req, res) => {
+  const { nome_cliente, texto } = req.body;
+  const atual = db.prepare("SELECT * FROM depoimentos WHERE id = ?").get(req.params.id);
+  if (!atual) return res.status(404).json({ erro: "Depoimento não encontrado." });
+
+  db.prepare("UPDATE depoimentos SET nome_cliente = ?, texto = ? WHERE id = ?").run(
+    nome_cliente ?? atual.nome_cliente,
+    texto ?? atual.texto,
+    req.params.id
+  );
+  res.json({ ok: true });
+});
+
+app.delete("/api/admin/depoimentos/:id", checarSenhaAdmin, (req, res) => {
+  const depoimento = db.prepare("SELECT * FROM depoimentos WHERE id = ?").get(req.params.id);
+  if (depoimento?.foto) {
+    const caminho = path.join(imgDir, depoimento.foto);
+    if (fs.existsSync(caminho)) fs.unlinkSync(caminho);
+  }
+  db.prepare("DELETE FROM depoimentos WHERE id = ?").run(req.params.id);
+  res.json({ ok: true });
+});
+
+app.post("/api/admin/depoimentos/:id/foto", checarSenhaAdmin, uploadDepoimento.single("imagem"), (req, res) => {
+  if (!req.file) return res.status(400).json({ erro: "Nenhum arquivo enviado." });
+
+  const depoimento = db.prepare("SELECT * FROM depoimentos WHERE id = ?").get(req.params.id);
+  if (!depoimento) return res.status(404).json({ erro: "Depoimento não encontrado." });
+
+  if (depoimento.foto) {
+    const antiga = path.join(imgDir, depoimento.foto);
+    if (fs.existsSync(antiga)) fs.unlinkSync(antiga);
+  }
+
+  db.prepare("UPDATE depoimentos SET foto = ? WHERE id = ?").run(req.file.filename, req.params.id);
+  res.json({ ok: true, foto: req.file.filename });
 });
 
 app.listen(PORT, () => {

@@ -74,6 +74,7 @@ function mostrarPainel() {
 const PAINEIS = {
   cardapio: "painelCardapio",
   pedidos: "painelPedidos",
+  depoimentos: "painelDepoimentos",
   aparencia: "painelAparencia",
 };
 
@@ -95,7 +96,7 @@ document.querySelectorAll("#adminTabs .admin-tab").forEach((btn) => {
 // ---------- Carregar dados ----------
 
 async function carregarTudo() {
-  await Promise.all([carregarCardapio(), carregarPedidos(), carregarLoja()]);
+  await Promise.all([carregarCardapio(), carregarPedidos(), carregarLoja(), carregarDepoimentosAdmin()]);
 }
 
 // ---------- Recorte de imagem (usado em logo, capas e fotos de produto) ----------
@@ -386,6 +387,96 @@ async function carregarPedidos() {
   }
 }
 
+// ---------- Depoimentos / Galeria de trabalhos ----------
+
+async function carregarDepoimentosAdmin() {
+  try {
+    const depoimentos = await apiAdmin("/api/admin/depoimentos");
+    const container = document.getElementById("depoimentosAdminLista");
+
+    if (!depoimentos.length) {
+      container.innerHTML = `<p class="loading">Nenhum depoimento cadastrado ainda.</p>`;
+      return;
+    }
+
+    container.innerHTML = depoimentos
+      .map(
+        (d) => `
+      <div class="depoimento-admin-card">
+        <div class="depoimento-admin-foto">
+          ${d.foto ? `<img src="/img/${d.foto}" />` : `<div class="depoimento-admin-sem-foto">🧵</div>`}
+          <input type="file" accept="image/*" data-foto-depo="${d.id}" hidden />
+          <button type="button" class="btn-mini" data-trocar-foto-depo="${d.id}">Foto</button>
+        </div>
+        <div class="depoimento-admin-info">
+          <strong>${d.nome_cliente}</strong>
+          <p>${d.texto || ""}</p>
+        </div>
+        <button type="button" class="btn-mini danger" data-remover-depo="${d.id}">Excluir</button>
+      </div>
+    `
+      )
+      .join("");
+
+    container.querySelectorAll("[data-trocar-foto-depo]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        container.querySelector(`[data-foto-depo="${btn.dataset.trocarFotoDepo}"]`).click();
+      });
+    });
+    container.querySelectorAll("[data-foto-depo]").forEach((input) => {
+      input.addEventListener("change", (e) => {
+        const arquivo = e.target.files[0];
+        if (!arquivo) return;
+        const id = input.dataset.fotoDepo;
+        abrirRecorte(arquivo, NaN, async (blob) => {
+          try {
+            const formData = new FormData();
+            formData.append("imagem", blob, "foto.jpg");
+            await apiAdmin(`/api/admin/depoimentos/${id}/foto`, { method: "POST", body: formData });
+            await carregarDepoimentosAdmin();
+          } catch (err) {
+            alert("Erro ao enviar foto: " + err.message);
+          } finally {
+            e.target.value = "";
+          }
+        });
+      });
+    });
+    container.querySelectorAll("[data-remover-depo]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("Excluir este depoimento?")) return;
+        try {
+          await apiAdmin(`/api/admin/depoimentos/${btn.dataset.removerDepo}`, { method: "DELETE" });
+          await carregarDepoimentosAdmin();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+    });
+  } catch (err) {
+    document.getElementById("depoimentosAdminLista").innerHTML = `<p class="loading">Erro: ${err.message}</p>`;
+  }
+}
+
+document.getElementById("formNovoDepoimento").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const nome = document.getElementById("depoNomeCliente").value.trim();
+  const texto = document.getElementById("depoTexto").value.trim();
+  if (!nome) return;
+
+  try {
+    await apiAdmin("/api/admin/depoimentos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nome_cliente: nome, texto }),
+    });
+    document.getElementById("formNovoDepoimento").reset();
+    await carregarDepoimentosAdmin();
+  } catch (err) {
+    alert("Erro ao adicionar: " + err.message);
+  }
+});
+
 // ---------- Render do cardápio no admin ----------
 
 function renderCardapio() {
@@ -577,6 +668,9 @@ function abrirModal(produtoId, categoriaIdPadrao) {
     document.getElementById("campoDescricao").value = produto.descricao || "";
     document.getElementById("campoPreco").value = produto.preco;
     document.getElementById("campoDisponivel").checked = !!produto.disponivel;
+    document.getElementById("campoTipoEntrega").value = produto.tipo_entrega || "pronta";
+    document.getElementById("campoPrazo").value = produto.prazo_producao || "";
+    atualizarVisibilidadePrazo();
     preencherSelectCategorias(produto.categoria_id);
     renderFotosGaleria(produto.fotos || []);
     document.getElementById("btnAddFoto").hidden = false;
@@ -587,6 +681,9 @@ function abrirModal(produtoId, categoriaIdPadrao) {
     document.getElementById("campoDescricao").value = "";
     document.getElementById("campoPreco").value = "";
     document.getElementById("campoDisponivel").checked = true;
+    document.getElementById("campoTipoEntrega").value = "pronta";
+    document.getElementById("campoPrazo").value = "";
+    atualizarVisibilidadePrazo();
     preencherSelectCategorias(categoriaIdPadrao);
     renderFotosGaleria([]);
     document.getElementById("btnAddFoto").hidden = true;
@@ -595,6 +692,12 @@ function abrirModal(produtoId, categoriaIdPadrao) {
 
   modal.hidden = false;
 }
+
+function atualizarVisibilidadePrazo() {
+  const ehEncomenda = document.getElementById("campoTipoEntrega").value === "encomenda";
+  document.getElementById("campoPrazoWrapper").hidden = !ehEncomenda;
+}
+document.getElementById("campoTipoEntrega").addEventListener("change", atualizarVisibilidadePrazo);
 
 function fecharModal() {
   modal.hidden = true;
@@ -691,6 +794,8 @@ formProduto.addEventListener("submit", async (e) => {
     preco: parseFloat(document.getElementById("campoPreco").value),
     categoria_id: document.getElementById("campoCategoria").value,
     disponivel: document.getElementById("campoDisponivel").checked,
+    tipo_entrega: document.getElementById("campoTipoEntrega").value,
+    prazo_producao: document.getElementById("campoPrazo").value.trim(),
   };
 
   try {

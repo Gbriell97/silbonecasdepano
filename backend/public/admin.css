@@ -476,6 +476,40 @@
 .btn-primario { background: var(--red); color: var(--paper); }
 .btn-secundario { background: #e6ddc8; color: var(--paper-ink); }
 
+/* ---- Depoimentos (admin) ---- */
+.depoimentos-admin-lista { display: flex; flex-direction: column; gap: 8px; }
+
+.depoimento-admin-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.depoimento-admin-foto {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.depoimento-admin-foto img,
+.depoimento-admin-sem-foto {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--bg-alt);
+}
+.depoimento-admin-sem-foto { display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
+
+.depoimento-admin-info { flex: 1; min-width: 0; }
+.depoimento-admin-info strong { display: block; font-size: 0.88rem; }
+.depoimento-admin-info p { margin: 2px 0 0; font-size: 0.78rem; color: var(--muted); }
+
 /* ---------- Responsivo (tablet e desktop) ---------- */
 @media (min-width: 900px) {
   .admin-panel { max-width: 960px; padding: 0 24px; }

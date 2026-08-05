@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS produtos (
   imagem TEXT,
   imagem_pos TEXT NOT NULL DEFAULT '50% 50%',
   disponivel INTEGER NOT NULL DEFAULT 1,
+  tipo_entrega TEXT NOT NULL DEFAULT 'pronta',
+  prazo_producao TEXT NOT NULL DEFAULT '',
   FOREIGN KEY (categoria_id) REFERENCES categorias(id)
 );
 
@@ -70,6 +72,14 @@ CREATE TABLE IF NOT EXISTS produto_fotos (
   ordem INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (produto_id) REFERENCES produtos(id)
 );
+
+CREATE TABLE IF NOT EXISTS depoimentos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nome_cliente TEXT NOT NULL,
+  texto TEXT NOT NULL DEFAULT '',
+  foto TEXT,
+  ordem INTEGER NOT NULL DEFAULT 0
+);
 `);
 
 // Migrações leves: adiciona colunas novas em bancos já existentes (versões antigas do app)
@@ -85,6 +95,8 @@ tentarAdicionarColuna("produtos", "imagem_pos TEXT NOT NULL DEFAULT '50% 50%'");
 tentarAdicionarColuna("loja_config", "capa1_pos TEXT NOT NULL DEFAULT '50% 50%'");
 tentarAdicionarColuna("loja_config", "capa2_pos TEXT NOT NULL DEFAULT '50% 50%'");
 tentarAdicionarColuna("loja_config", "capa3_pos TEXT NOT NULL DEFAULT '50% 50%'");
+tentarAdicionarColuna("produtos", "tipo_entrega TEXT NOT NULL DEFAULT 'pronta'");
+tentarAdicionarColuna("produtos", "prazo_producao TEXT NOT NULL DEFAULT ''");
 
 // Migra fotos que já estavam no campo antigo "imagem" para a nova tabela produto_fotos,
 // caso ainda não tenham sido migradas (garante compatibilidade com bancos já em uso)
