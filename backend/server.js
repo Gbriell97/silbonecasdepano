@@ -18,6 +18,41 @@ app.get("/admin", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 
+// Manifest do app (usado pelo celular ao "Adicionar à tela inicial")
+// É gerado dinamicamente porque usa a logo e a cor que a loja configurou no admin.
+function montarManifest({ nome, startUrl, sufixoNome }) {
+  const configLoja = db.prepare("SELECT * FROM loja_config WHERE id = 1").get();
+  const logoUrl = configLoja.logo ? `/img/${configLoja.logo}` : null;
+  const ext = configLoja.logo ? path.extname(configLoja.logo).toLowerCase() : "";
+  const mimeType = ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/jpeg";
+
+  const nomeCompleto = sufixoNome ? `${sufixoNome} ${configLoja.nome}` : configLoja.nome;
+  const primeiraPalavra = configLoja.nome.split(" ")[0];
+
+  return {
+    name: nomeCompleto,
+    short_name: sufixoNome ? `Admin ${primeiraPalavra}` : configLoja.nome.split(" ").slice(0, 2).join(" "),
+    start_url: startUrl,
+    display: "standalone",
+    background_color: "#ffffff",
+    theme_color: configLoja.cor_primaria || "#2f6b3a",
+    icons: logoUrl
+      ? [
+          { src: logoUrl, sizes: "192x192", type: mimeType, purpose: "any maskable" },
+          { src: logoUrl, sizes: "512x512", type: mimeType, purpose: "any maskable" },
+        ]
+      : [],
+  };
+}
+
+app.get("/manifest.json", (req, res) => {
+  res.json(montarManifest({ startUrl: "/" }));
+});
+
+app.get("/manifest-admin.json", (req, res) => {
+  res.json(montarManifest({ startUrl: "/admin", sufixoNome: "Admin —" }));
+});
+
 // Config do estabelecimento (troque no arquivo .env)
 const CONFIG = {
   nomeLoja: process.env.NOME_LOJA || "Sabor Express",

@@ -37,6 +37,7 @@ async function init() {
   document.documentElement.style.setProperty("--cor-primaria", loja.corPrimaria || "#2f6b3a");
   const themeMeta = document.getElementById("themeColorMeta");
   if (themeMeta) themeMeta.content = loja.corPrimaria || "#2f6b3a";
+  configurarIconesApp(loja);
 
   renderCapa(loja);
   renderStoreCard(loja);
@@ -67,6 +68,27 @@ function renderDepoimentos(depoimentos) {
   `
     )
     .join("");
+}
+
+function configurarIconesApp(loja) {
+  if (!loja.logo) return;
+  const logoUrl = `/img/${loja.logo}`;
+
+  const favicon = document.createElement("link");
+  favicon.rel = "icon";
+  favicon.href = logoUrl;
+  document.head.appendChild(favicon);
+
+  const appleIcon = document.createElement("link");
+  appleIcon.rel = "apple-touch-icon";
+  appleIcon.href = logoUrl;
+  document.head.appendChild(appleIcon);
+}
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
 }
 
 function renderCapa(loja) {

@@ -8,6 +8,27 @@ function fmt(v) {
   return Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function configurarIconesApp(logo) {
+  if (!logo) return;
+  const logoUrl = `/img/${logo}`;
+
+  const favicon = document.createElement("link");
+  favicon.rel = "icon";
+  favicon.href = logoUrl;
+  document.head.appendChild(favicon);
+
+  const appleIcon = document.createElement("link");
+  appleIcon.rel = "apple-touch-icon";
+  appleIcon.href = logoUrl;
+  document.head.appendChild(appleIcon);
+}
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
+
 async function apiAdmin(path, options = {}) {
   const resp = await fetch(path, {
     ...options,
@@ -190,6 +211,7 @@ async function carregarLoja() {
       document.getElementById("previewLogo").src = `/img/${loja.logo}`;
       document.getElementById("previewLogo").hidden = false;
       document.getElementById("previewLogoFallback").hidden = true;
+      configurarIconesApp(loja.logo);
     }
     ["capa1", "capa2", "capa3"].forEach((campo, i) => {
       if (loja[campo]) {
