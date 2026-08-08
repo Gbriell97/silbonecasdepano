@@ -5,6 +5,8 @@ const state = {
   busca: "",
   galeriaFotos: [],
   galeriaIndex: 0,
+  detalheProdutoId: null,
+  detalheIndex: 0,
 };
 
 const fmt = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -191,6 +193,12 @@ function renderMenu(categorias) {
   menu.querySelectorAll("[data-foto]").forEach((thumb) =>
     thumb.addEventListener("click", () => abrirFoto(thumb.dataset.foto))
   );
+  menu.querySelectorAll("[data-detalhe]").forEach((card) => {
+    card.addEventListener("click", (e) => {
+      if (e.target.closest("[data-foto], [data-add], [data-inc], [data-dec]")) return;
+      abrirDetalheProduto(card.dataset.detalhe);
+    });
+  });
 }
 
 function abrirFoto(produtoId) {
@@ -234,6 +242,126 @@ function fecharFoto() {
   document.getElementById("modalFoto").hidden = true;
 }
 
+// ---------- Detalhe do produto ----------
+
+function abrirDetalheProduto(produtoId) {
+  const produto = findProduto(produtoId);
+  if (!produto) return;
+
+  state.detalheProdutoId = produtoId;
+  state.detalheIndex = 0;
+  renderDetalheModal();
+  document.getElementById("modalProdutoDetalhe").hidden = false;
+}
+
+function fecharDetalhe() {
+  document.getElementById("modalProdutoDetalhe").hidden = true;
+  state.detalheProdutoId = null;
+}
+
+function renderDetalheModal() {
+  const produto = findProduto(state.detalheProdutoId);
+  if (!produto) return;
+
+  const categoria = state.categorias.find((c) => c.produtos.some((p) => String(p.id) === String(produto.id)));
+  const fotos = produto.fotos?.length ? produto.fotos : produto.imagem ? [{ arquivo: produto.imagem, posicao: produto.imagem_pos }] : [];
+
+  document.getElementById("detalheEmoji").textContent = emojiFor(categoria);
+  const img = document.getElementById("detalheImg");
+  if (fotos.length) {
+    img.src = `/img/${fotos[state.detalheIndex].arquivo}`;
+    img.style.objectPosition = fotos[state.detalheIndex].posicao || "50% 50%";
+    img.hidden = false;
+  } else {
+    img.hidden = true;
+  }
+
+  const nav = document.getElementById("detalheFotoNav");
+  nav.hidden = fotos.length < 2;
+  document.getElementById("detalheFotoContador").textContent = fotos.length > 1 ? `${state.detalheIndex + 1} / ${fotos.length}` : "";
+
+  const selo =
+    produto.tipo_entrega === "encomenda"
+      ? `<span class="selo-entrega encomenda">Sob encomenda${produto.prazo_producao ? ` · ${produto.prazo_producao}` : ""}</span>`
+      : `<span class="selo-entrega pronta">Pronta entrega</span>`;
+  document.getElementById("detalheSelo").innerHTML = selo;
+
+  document.getElementById("detalheNome").textContent = produto.nome;
+  document.getElementById("detalheDescricao").textContent = produto.descricao || "";
+  document.getElementById("detalhePreco").textContent = fmt(produto.preco);
+
+  atualizarDetalheQty();
+}
+
+function atualizarDetalheQty() {
+  if (!state.detalheProdutoId) return;
+  const item = state.carrinho[state.detalheProdutoId];
+  const qtd = item ? item.quantidade : 0;
+  const container = document.getElementById("detalheQtyControls");
+
+  container.innerHTML =
+    qtd === 0
+      ? `<button class="add-btn" data-add="${state.detalheProdutoId}">+</button>`
+      : `<button class="qty-btn remove" data-dec="${state.detalheProdutoId}">−</button>
+         <span class="qty-value">${qtd}</span>
+         <button class="qty-btn" data-inc="${state.detalheProdutoId}">+</button>`;
+
+  container.querySelectorAll("[data-add]").forEach((b) => b.addEventListener("click", () => addItem(b.dataset.add)));
+  container.querySelectorAll("[data-inc]").forEach((b) => b.addEventListener("click", () => addItem(b.dataset.inc)));
+  container.querySelectorAll("[data-dec]").forEach((b) => b.addEventListener("click", () => removeItem(b.dataset.dec)));
+}
+
+function detalheFotoAnterior() {
+  const produto = findProduto(state.detalheProdutoId);
+  const fotos = produto?.fotos?.length ? produto.fotos : [];
+  if (fotos.length < 2) return;
+  state.detalheIndex = (state.detalheIndex - 1 + fotos.length) % fotos.length;
+  renderDetalheModal();
+}
+
+function detalheFotoProxima() {
+  const produto = findProduto(state.detalheProdutoId);
+  const fotos = produto?.fotos?.length ? produto.fotos : [];
+  if (fotos.length < 2) return;
+  state.detalheIndex = (state.detalheIndex + 1) % fotos.length;
+  renderDetalheModal();
+}
+
+// ---------- Compartilhar ----------
+
+async function compartilhar({ title, text, url }) {
+  if (navigator.share) {
+    try {
+      await navigator.share({ title, text, url });
+    } catch {
+      // usuário cancelou o compartilhamento — sem problema
+    }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    alert("Link copiado! Cole em uma conversa para compartilhar.");
+  } catch {
+    prompt("Copie o link abaixo:", url);
+  }
+}
+
+function compartilharLoja() {
+  const nome = state.loja?.nome || document.title;
+  compartilhar({ title: nome, text: `Confira o cardápio de ${nome}!`, url: window.location.origin });
+}
+
+function compartilharProduto() {
+  const produto = findProduto(state.detalheProdutoId);
+  if (!produto) return;
+  const nomeLoja = state.loja?.nome || document.title;
+  compartilhar({
+    title: produto.nome,
+    text: `${produto.nome} — ${fmt(produto.preco)}\nConfira em ${nomeLoja}!`,
+    url: window.location.origin,
+  });
+}
+
 function productCardHTML(produto, categoria) {
   const item = state.carrinho[produto.id];
   const qtd = item ? item.quantidade : 0;
@@ -246,7 +374,7 @@ function productCardHTML(produto, categoria) {
       : `<span class="selo-entrega pronta">Pronta entrega</span>`;
 
   return `
-    <div class="product-card">
+    <div class="product-card" data-detalhe="${produto.id}">
       <div class="product-thumb" ${capa ? `data-foto="${produto.id}"` : ""}>
         <span>${emojiFor(categoria)}</span>
         ${capa ? `<img class="thumb-img" src="/img/${capa.arquivo}" style="object-position: ${posicao}" onerror="this.remove()" />` : ""}
@@ -306,6 +434,7 @@ function cartCount() {
 function refresh() {
   renderMenu(state.categorias);
   renderTicket();
+  if (state.detalheProdutoId) atualizarDetalheQty();
 
   const count = cartCount();
   const badge = document.getElementById("cartCount");
@@ -391,6 +520,13 @@ function bindGlobalEvents() {
   document.getElementById("fotoBackdrop").addEventListener("click", fecharFoto);
   document.getElementById("fotoAnterior").addEventListener("click", fotoAnterior);
   document.getElementById("fotoProxima").addEventListener("click", fotoProxima);
+
+  document.getElementById("fecharDetalhe").addEventListener("click", fecharDetalhe);
+  document.getElementById("detalheBackdrop").addEventListener("click", fecharDetalhe);
+  document.getElementById("detalheFotoAnterior").addEventListener("click", detalheFotoAnterior);
+  document.getElementById("detalheFotoProxima").addEventListener("click", detalheFotoProxima);
+  document.getElementById("btnCompartilharProduto").addEventListener("click", compartilharProduto);
+  document.getElementById("btnCompartilharLoja").addEventListener("click", compartilharLoja);
 
   document.getElementById("searchInput").addEventListener("input", (e) => {
     state.busca = e.target.value.trim();

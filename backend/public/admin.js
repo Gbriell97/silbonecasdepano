@@ -117,7 +117,7 @@ document.querySelectorAll("#adminTabs .admin-tab").forEach((btn) => {
 // ---------- Carregar dados ----------
 
 async function carregarTudo() {
-  await Promise.all([carregarCardapio(), carregarPedidos(), carregarLoja(), carregarDepoimentosAdmin()]);
+  await Promise.all([carregarCardapio(), carregarPedidos(), carregarLoja(), carregarDepoimentosAdmin(), carregarVisitas()]);
 }
 
 // ---------- Recorte de imagem (usado em logo, capas e fotos de produto) ----------
@@ -377,6 +377,32 @@ async function carregarCardapio() {
     renderCardapio();
   } catch (err) {
     document.getElementById("adminContent").innerHTML = `<p class="loading">Erro: ${err.message}</p>`;
+  }
+}
+
+async function carregarVisitas() {
+  try {
+    const dados = await apiAdmin("/api/admin/visitas");
+    const container = document.getElementById("visitasCards");
+
+    const totalSemana = dados.ultimos7dias.reduce((soma, d) => soma + d.c, 0);
+
+    container.innerHTML = `
+      <div class="visita-card">
+        <span class="visita-numero">${dados.total}</span>
+        <span class="visita-label">Total de visitas</span>
+      </div>
+      <div class="visita-card">
+        <span class="visita-numero">${dados.hoje}</span>
+        <span class="visita-label">Hoje</span>
+      </div>
+      <div class="visita-card">
+        <span class="visita-numero">${totalSemana}</span>
+        <span class="visita-label">Últimos 7 dias</span>
+      </div>
+    `;
+  } catch (err) {
+    document.getElementById("visitasCards").innerHTML = `<p class="loading">Erro: ${err.message}</p>`;
   }
 }
 

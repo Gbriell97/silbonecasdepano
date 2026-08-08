@@ -281,6 +281,24 @@
 }
 .horario-item.desabilitado input[type="time"] { opacity: 0.4; }
 
+.visitas-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.visita-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 14px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.visita-numero { font-family: var(--display); font-size: 1.6rem; color: var(--mustard); }
+.visita-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; text-align: center; font-weight: 700; }
+
 .pedido-card {
   background: var(--card);
   border: 1px solid var(--card-border);

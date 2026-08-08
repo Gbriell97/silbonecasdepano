@@ -11,6 +11,33 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// Bots de prévia de link (WhatsApp, Facebook, etc.) não devem contar como visita de verdade
+function ehBotDePreview(userAgent = "") {
+  return /whatsapp|facebookexternalhit|telegrambot|slackbot|discordbot|linkedinbot|twitterbot/i.test(userAgent);
+}
+
+// Página principal: injeta nome, logo e cor da loja nas meta tags (usadas pela prévia
+// de link do WhatsApp/Instagram/etc.) e registra a visita.
+app.get("/", (req, res) => {
+  const configLoja = db.prepare("SELECT * FROM loja_config WHERE id = 1").get();
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
+  const imagemUrl = configLoja.logo ? `${baseUrl}/img/${configLoja.logo}` : `${baseUrl}/img/${configLoja.capa1 || ""}`;
+
+  if (!ehBotDePreview(req.headers["user-agent"])) {
+    db.prepare("INSERT INTO visitas (pagina) VALUES ('home')").run();
+  }
+
+  let html = fs.readFileSync(path.join(__dirname, "public", "index.html"), "utf-8");
+  html = html
+    .replace(/%%OG_TITLE%%/g, configLoja.nome || "Cardápio Digital")
+    .replace(/%%OG_DESCRICAO%%/g, configLoja.tagline || "Confira nosso cardápio!")
+    .replace(/%%OG_IMAGEM%%/g, imagemUrl)
+    .replace(/%%OG_URL%%/g, baseUrl);
+
+  res.send(html);
+});
+
 app.use(express.static(path.join(__dirname, "public")));
 
 // Permite acessar /admin (sem .html) diretamente
@@ -565,6 +592,28 @@ app.post("/api/admin/depoimentos/:id/foto", checarSenhaAdmin, uploadDepoimento.s
 
   db.prepare("UPDATE depoimentos SET foto = ? WHERE id = ?").run(req.file.filename, req.params.id);
   res.json({ ok: true, foto: req.file.filename });
+});
+
+// ---------- Estatísticas de visitas ----------
+
+app.get("/api/admin/visitas", checarSenhaAdmin, (req, res) => {
+  const total = db.prepare("SELECT COUNT(*) AS c FROM visitas").get().c;
+
+  const hoje = db
+    .prepare("SELECT COUNT(*) AS c FROM visitas WHERE date(criado_em) = date('now', 'localtime')")
+    .get().c;
+
+  const ultimos7dias = db
+    .prepare(
+      `SELECT date(criado_em) AS dia, COUNT(*) AS c
+       FROM visitas
+       WHERE criado_em >= datetime('now', '-7 days', 'localtime')
+       GROUP BY dia
+       ORDER BY dia ASC`
+    )
+    .all();
+
+  res.json({ total, hoje, ultimos7dias });
 });
 
 app.listen(PORT, () => {

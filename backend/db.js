@@ -80,6 +80,12 @@ CREATE TABLE IF NOT EXISTS depoimentos (
   foto TEXT,
   ordem INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS visitas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  pagina TEXT NOT NULL DEFAULT 'home',
+  criado_em TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
 `);
 
 // Migrações leves: adiciona colunas novas em bancos já existentes (versões antigas do app)
