@@ -110,6 +110,30 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; }
 
 /* ---------- Ações rápidas ---------- */
 
+/* ---------- Redes sociais ---------- */
+
+.social-row {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px 0;
+}
+.social-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 9px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+}
+.social-btn span { font-size: 0.95rem; }
+
 .quick-actions {
   display: flex;
   gap: 8px;
@@ -574,6 +598,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; }
   font-size: 2.4rem;
   flex-shrink: 0;
 }
+.detalhe-thumb .thumb-img { object-fit: contain; object-position: 50% 50% !important; background: #f4f2ec; }
 
 .foto-contador-inline {
   position: absolute;

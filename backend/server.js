@@ -216,6 +216,7 @@ app.get("/api/loja", (req, res) => {
     corPrimaria: configLoja.cor_primaria,
     endereco: configLoja.endereco,
     textoEntrega: configLoja.texto_entrega,
+    instagram: configLoja.instagram,
     aberto: calcularAberto(configLoja),
     horarios,
     whatsapp: CONFIG.whatsapp,
@@ -478,17 +479,18 @@ app.get("/api/admin/loja", checarSenhaAdmin, (req, res) => {
 });
 
 app.put("/api/admin/loja", checarSenhaAdmin, (req, res) => {
-  const { nome, tagline, cor_primaria, endereco, texto_entrega, sempre_aberto, horarios } = req.body;
+  const { nome, tagline, cor_primaria, endereco, texto_entrega, instagram, sempre_aberto, horarios } = req.body;
   const atual = db.prepare("SELECT * FROM loja_config WHERE id = 1").get();
 
   db.prepare(
-    `UPDATE loja_config SET nome = ?, tagline = ?, cor_primaria = ?, endereco = ?, texto_entrega = ?, sempre_aberto = ?, horarios_json = ? WHERE id = 1`
+    `UPDATE loja_config SET nome = ?, tagline = ?, cor_primaria = ?, endereco = ?, texto_entrega = ?, instagram = ?, sempre_aberto = ?, horarios_json = ? WHERE id = 1`
   ).run(
     nome ?? atual.nome,
     tagline ?? atual.tagline,
     cor_primaria ?? atual.cor_primaria,
     endereco ?? atual.endereco,
     texto_entrega ?? atual.texto_entrega,
+    instagram ?? atual.instagram,
     sempre_aberto !== undefined ? (sempre_aberto ? 1 : 0) : atual.sempre_aberto,
     horarios ? JSON.stringify(horarios) : atual.horarios_json
   );

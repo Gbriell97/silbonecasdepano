@@ -133,6 +133,42 @@ function renderStoreCard(loja) {
     statusText.textContent = "Fechado no momento";
   }
   document.getElementById("storeDelivery").textContent = loja.textoEntrega || "";
+
+  renderRedesSociais(loja);
+}
+
+function montarLinkInstagram(valor) {
+  if (!valor) return null;
+  const limpo = valor.trim();
+  if (/^https?:\/\//i.test(limpo)) return limpo;
+  return `https://instagram.com/${limpo.replace(/^@/, "")}`;
+}
+
+function renderRedesSociais(loja) {
+  const row = document.getElementById("socialRow");
+  const btnWhats = document.getElementById("socialWhats");
+  const btnInsta = document.getElementById("socialInsta");
+
+  let temAlgum = false;
+
+  if (loja.whatsapp) {
+    btnWhats.href = `https://wa.me/${loja.whatsapp}`;
+    btnWhats.hidden = false;
+    temAlgum = true;
+  } else {
+    btnWhats.hidden = true;
+  }
+
+  const linkInsta = montarLinkInstagram(loja.instagram);
+  if (linkInsta) {
+    btnInsta.href = linkInsta;
+    btnInsta.hidden = false;
+    temAlgum = true;
+  } else {
+    btnInsta.hidden = true;
+  }
+
+  row.hidden = !temAlgum;
 }
 
 function renderNav(categorias) {

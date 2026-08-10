@@ -204,6 +204,7 @@ async function carregarLoja() {
     document.getElementById("lojaTagline").value = loja.tagline || "";
     document.getElementById("lojaEndereco").value = loja.endereco || "";
     document.getElementById("lojaEntrega").value = loja.texto_entrega || "";
+    document.getElementById("lojaInstagram").value = loja.instagram || "";
     document.getElementById("lojaCor").value = loja.cor_primaria || "#2f6b3a";
     document.getElementById("lojaSempreAberto").checked = !!loja.sempre_aberto;
 
@@ -292,6 +293,7 @@ document.getElementById("formLoja").addEventListener("submit", async (e) => {
         tagline: document.getElementById("lojaTagline").value.trim(),
         endereco: document.getElementById("lojaEndereco").value.trim(),
         texto_entrega: document.getElementById("lojaEntrega").value.trim(),
+        instagram: document.getElementById("lojaInstagram").value.trim(),
         cor_primaria: document.getElementById("lojaCor").value,
         sempre_aberto: document.getElementById("lojaSempreAberto").checked,
         horarios: coletarHorarios(),

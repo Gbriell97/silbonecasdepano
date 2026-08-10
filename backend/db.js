@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS loja_config (
   cor_primaria TEXT NOT NULL DEFAULT '#e8a33d',
   endereco TEXT NOT NULL DEFAULT '',
   texto_entrega TEXT NOT NULL DEFAULT '',
+  instagram TEXT NOT NULL DEFAULT '',
   sempre_aberto INTEGER NOT NULL DEFAULT 1,
   horarios_json TEXT NOT NULL DEFAULT '{}'
 );
@@ -103,6 +104,7 @@ tentarAdicionarColuna("loja_config", "capa2_pos TEXT NOT NULL DEFAULT '50% 50%'"
 tentarAdicionarColuna("loja_config", "capa3_pos TEXT NOT NULL DEFAULT '50% 50%'");
 tentarAdicionarColuna("produtos", "tipo_entrega TEXT NOT NULL DEFAULT 'pronta'");
 tentarAdicionarColuna("produtos", "prazo_producao TEXT NOT NULL DEFAULT ''");
+tentarAdicionarColuna("loja_config", "instagram TEXT NOT NULL DEFAULT ''");
 
 // Migra fotos que já estavam no campo antigo "imagem" para a nova tabela produto_fotos,
 // caso ainda não tenham sido migradas (garante compatibilidade com bancos já em uso)
