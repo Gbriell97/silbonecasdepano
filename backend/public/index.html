@@ -10,6 +10,12 @@
 <link rel="manifest" href="/manifest.json" />
 <title>%%OG_TITLE%%</title>
 
+<!-- SEO: ajuda o Google a entender e indexar a página -->
+<meta name="description" content="%%OG_DESCRICAO%%" />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="%%OG_URL%%" />
+<script type="application/ld+json">%%JSON_LD%%</script>
+
 <!-- Prévia do link (WhatsApp, Instagram, Facebook, etc.) -->
 <meta property="og:title" content="%%OG_TITLE%%" />
 <meta property="og:description" content="%%OG_DESCRICAO%%" />
@@ -47,11 +53,8 @@
 
 <!-- Redes sociais -->
 <div class="social-row" id="socialRow" hidden>
-  <a href="#" id="socialWhats" class="social-btn" target="_blank" rel="noopener" hidden>
-    <span>💬</span> WhatsApp
-  </a>
   <a href="#" id="socialInsta" class="social-btn" target="_blank" rel="noopener" hidden>
-    <span>📷</span> Instagram
+    <span>📷</span> Seguir no Instagram
   </a>
 </div>
 
@@ -187,7 +190,10 @@
       <p id="detalheDescricao"></p>
       <div class="detalhe-preco-linha">
         <span class="product-price" id="detalhePreco"></span>
-        <button class="btn-compartilhar-mini" id="btnCompartilharProduto">📤 Compartilhar</button>
+        <div class="detalhe-preco-acoes">
+          <button class="fav-btn-detalhe" id="btnFavoritarDetalhe" aria-label="Favoritar">🤍</button>
+          <button class="btn-compartilhar-mini" id="btnCompartilharProduto">📤 Compartilhar</button>
+        </div>
       </div>
       <div class="detalhe-acoes">
         <div class="qty-controls" id="detalheQtyControls"></div>
@@ -196,10 +202,18 @@
   </div>
 </div>
 
+<!-- Botão flutuante do WhatsApp -->
+<a href="#" id="whatsappFloat" class="whatsapp-float" target="_blank" rel="noopener" hidden aria-label="Falar no WhatsApp">
+  💬
+</a>
+
 <!-- Barra de navegação inferior -->
 <nav class="bottom-nav">
   <button class="bottom-item active" data-nav="catalogo">
     <span>📖</span> Catálogo
+  </button>
+  <button class="bottom-item" data-nav="favoritos">
+    <span>🤍</span> Favoritos
   </button>
   <button class="bottom-item" data-nav="carrinho">
     <span>🧾</span> Carrinho

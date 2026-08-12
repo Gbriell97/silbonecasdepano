@@ -7,6 +7,8 @@ const state = {
   galeriaIndex: 0,
   detalheProdutoId: null,
   detalheIndex: 0,
+  favoritos: new Set(JSON.parse(localStorage.getItem("favoritos") || "[]")),
+  mostrarSoFavoritos: false,
 };
 
 const fmt = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -146,29 +148,25 @@ function montarLinkInstagram(valor) {
 
 function renderRedesSociais(loja) {
   const row = document.getElementById("socialRow");
-  const btnWhats = document.getElementById("socialWhats");
   const btnInsta = document.getElementById("socialInsta");
-
-  let temAlgum = false;
-
-  if (loja.whatsapp) {
-    btnWhats.href = `https://wa.me/${loja.whatsapp}`;
-    btnWhats.hidden = false;
-    temAlgum = true;
-  } else {
-    btnWhats.hidden = true;
-  }
 
   const linkInsta = montarLinkInstagram(loja.instagram);
   if (linkInsta) {
     btnInsta.href = linkInsta;
     btnInsta.hidden = false;
-    temAlgum = true;
+    row.hidden = false;
   } else {
     btnInsta.hidden = true;
+    row.hidden = true;
   }
 
-  row.hidden = !temAlgum;
+  const whatsFloat = document.getElementById("whatsappFloat");
+  if (loja.whatsapp) {
+    whatsFloat.href = `https://wa.me/${loja.whatsapp}`;
+    whatsFloat.hidden = false;
+  } else {
+    whatsFloat.hidden = true;
+  }
 }
 
 function renderNav(categorias) {
@@ -194,9 +192,27 @@ function renderNav(categorias) {
 }
 
 function produtosFiltrados(produtos) {
-  if (!state.busca) return produtos;
-  const termo = state.busca.toLowerCase();
-  return produtos.filter((p) => p.nome.toLowerCase().includes(termo));
+  let resultado = produtos;
+  if (state.mostrarSoFavoritos) {
+    resultado = resultado.filter((p) => state.favoritos.has(String(p.id)));
+  }
+  if (state.busca) {
+    const termo = state.busca.toLowerCase();
+    resultado = resultado.filter((p) => p.nome.toLowerCase().includes(termo));
+  }
+  return resultado;
+}
+
+function toggleFavorito(id) {
+  const chave = String(id);
+  if (state.favoritos.has(chave)) {
+    state.favoritos.delete(chave);
+  } else {
+    state.favoritos.add(chave);
+  }
+  localStorage.setItem("favoritos", JSON.stringify([...state.favoritos]));
+  renderMenu(state.categorias);
+  if (state.detalheProdutoId === chave) atualizarBotaoFavoritoDetalhe();
 }
 
 function renderMenu(categorias) {
@@ -221,7 +237,11 @@ function renderMenu(categorias) {
     })
     .join("");
 
-  menu.innerHTML = blocos || `<p class="loading">Nenhum item encontrado para "${state.busca}".</p>`;
+  const mensagemVazia = state.mostrarSoFavoritos
+    ? `<p class="loading">Você ainda não favoritou nenhum item.<br>Toca no 🤍 dos produtos que gostar!</p>`
+    : `<p class="loading">Nenhum item encontrado para "${state.busca}".</p>`;
+
+  menu.innerHTML = blocos || mensagemVazia;
 
   menu.querySelectorAll("[data-add]").forEach((btn) => btn.addEventListener("click", () => addItem(btn.dataset.add)));
   menu.querySelectorAll("[data-inc]").forEach((btn) => btn.addEventListener("click", () => addItem(btn.dataset.inc)));
@@ -231,10 +251,13 @@ function renderMenu(categorias) {
   );
   menu.querySelectorAll("[data-detalhe]").forEach((card) => {
     card.addEventListener("click", (e) => {
-      if (e.target.closest("[data-foto], [data-add], [data-inc], [data-dec]")) return;
+      if (e.target.closest("[data-foto], [data-add], [data-inc], [data-dec], [data-fav]")) return;
       abrirDetalheProduto(card.dataset.detalhe);
     });
   });
+  menu.querySelectorAll("[data-fav]").forEach((btn) =>
+    btn.addEventListener("click", () => toggleFavorito(btn.dataset.fav))
+  );
 }
 
 function abrirFoto(produtoId) {
@@ -326,7 +349,15 @@ function renderDetalheModal() {
   document.getElementById("detalheDescricao").textContent = produto.descricao || "";
   document.getElementById("detalhePreco").textContent = fmt(produto.preco);
 
+  atualizarBotaoFavoritoDetalhe();
   atualizarDetalheQty();
+}
+
+function atualizarBotaoFavoritoDetalhe() {
+  const btn = document.getElementById("btnFavoritarDetalhe");
+  const favoritado = state.favoritos.has(String(state.detalheProdutoId));
+  btn.textContent = favoritado ? "❤️" : "🤍";
+  btn.classList.toggle("ativo", favoritado);
 }
 
 function atualizarDetalheQty() {
@@ -409,11 +440,14 @@ function productCardHTML(produto, categoria) {
       ? `<span class="selo-entrega encomenda">Sob encomenda${produto.prazo_producao ? ` · ${produto.prazo_producao}` : ""}</span>`
       : `<span class="selo-entrega pronta">Pronta entrega</span>`;
 
+  const favoritado = state.favoritos.has(String(produto.id));
+
   return `
     <div class="product-card" data-detalhe="${produto.id}">
       <div class="product-thumb" ${capa ? `data-foto="${produto.id}"` : ""}>
         <span>${emojiFor(categoria)}</span>
         ${capa ? `<img class="thumb-img" src="/img/${capa.arquivo}" style="object-position: ${posicao}" onerror="this.remove()" />` : ""}
+        <button class="fav-btn ${favoritado ? "ativo" : ""}" data-fav="${produto.id}" aria-label="Favoritar">${favoritado ? "❤️" : "🤍"}</button>
         ${produto.fotos?.length > 1 ? `<span class="thumb-multi-badge">${produto.fotos.length} 📷</span>` : ""}
       </div>
       <div class="product-info">
@@ -562,6 +596,7 @@ function bindGlobalEvents() {
   document.getElementById("detalheFotoAnterior").addEventListener("click", detalheFotoAnterior);
   document.getElementById("detalheFotoProxima").addEventListener("click", detalheFotoProxima);
   document.getElementById("btnCompartilharProduto").addEventListener("click", compartilharProduto);
+  document.getElementById("btnFavoritarDetalhe").addEventListener("click", () => toggleFavorito(state.detalheProdutoId));
   document.getElementById("btnCompartilharLoja").addEventListener("click", compartilharLoja);
 
   document.getElementById("searchInput").addEventListener("input", (e) => {
@@ -592,8 +627,19 @@ function bindGlobalEvents() {
       if (nav === "catalogo") {
         closeTicketFn();
         document.getElementById("modalInfo").hidden = true;
+        if (state.mostrarSoFavoritos) {
+          state.mostrarSoFavoritos = false;
+          renderMenu(state.categorias);
+        }
         window.scrollTo({ top: 0, behavior: "smooth" });
         setBottomActive("catalogo");
+      } else if (nav === "favoritos") {
+        closeTicketFn();
+        document.getElementById("modalInfo").hidden = true;
+        state.mostrarSoFavoritos = true;
+        renderMenu(state.categorias);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        setBottomActive("favoritos");
       } else if (nav === "carrinho") {
         document.getElementById("modalInfo").hidden = true;
         openTicket();

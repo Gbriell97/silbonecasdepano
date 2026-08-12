@@ -28,14 +28,39 @@ app.get("/", (req, res) => {
     db.prepare("INSERT INTO visitas (pagina) VALUES ('home')").run();
   }
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Store",
+    name: configLoja.nome,
+    description: configLoja.tagline || undefined,
+    image: configLoja.logo ? imagemUrl : undefined,
+    address: configLoja.endereco || undefined,
+    telephone: CONFIG.whatsapp || undefined,
+    url: baseUrl,
+  };
+
   let html = fs.readFileSync(path.join(__dirname, "public", "index.html"), "utf-8");
   html = html
     .replace(/%%OG_TITLE%%/g, configLoja.nome || "Cardápio Digital")
     .replace(/%%OG_DESCRICAO%%/g, configLoja.tagline || "Confira nosso cardápio!")
     .replace(/%%OG_IMAGEM%%/g, imagemUrl)
-    .replace(/%%OG_URL%%/g, baseUrl);
+    .replace(/%%OG_URL%%/g, baseUrl)
+    .replace(/%%JSON_LD%%/g, JSON.stringify(jsonLd).replace(/</g, "\\u003c"));
 
   res.send(html);
+});
+
+// Ajuda o Google e outros buscadores a encontrar o site
+app.get("/robots.txt", (req, res) => {
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
+  res.type("text/plain").send(`User-agent: *\nAllow: /\nDisallow: /admin\nSitemap: ${baseUrl}/sitemap.xml`);
+});
+
+app.get("/sitemap.xml", (req, res) => {
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
+  res.type("application/xml").send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${baseUrl}/</loc></url>\n</urlset>`
+  );
 });
 
 app.use(express.static(path.join(__dirname, "public")));

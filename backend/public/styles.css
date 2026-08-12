@@ -723,6 +723,58 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; }
   border-radius: 999px;
 }
 
+.fav-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.9);
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.fav-btn.ativo { background: #fff; }
+
+.fav-btn-detalhe {
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  width: 34px;
+  height: 34px;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detalhe-preco-acoes { display: flex; align-items: center; gap: 8px; }
+
+.whatsapp-float {
+  position: fixed;
+  right: 16px;
+  bottom: 92px;
+  z-index: 35;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #25d366;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+}
+
 .product-thumb { cursor: zoom-in; }
 
 /* ---------- Barra inferior ---------- */
@@ -762,6 +814,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; }
 @media (min-width: 900px) {
   .cover,
   .store-card,
+  .social-row,
   .quick-actions,
   .search-bar,
   .cat-grid,
@@ -795,6 +848,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; }
 @media (min-width: 1200px) {
   .cover,
   .store-card,
+  .social-row,
   .quick-actions,
   .search-bar,
   .cat-grid,
