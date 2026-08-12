@@ -45,7 +45,13 @@ app.get("/", (req, res) => {
     .replace(/%%OG_DESCRICAO%%/g, configLoja.tagline || "Confira nosso cardápio!")
     .replace(/%%OG_IMAGEM%%/g, imagemUrl)
     .replace(/%%OG_URL%%/g, baseUrl)
-    .replace(/%%JSON_LD%%/g, JSON.stringify(jsonLd).replace(/</g, "\\u003c"));
+    .replace(/%%JSON_LD%%/g, JSON.stringify(jsonLd).replace(/</g, "\\u003c"))
+    .replace(
+      /%%GOOGLE_VERIFICATION%%/g,
+      process.env.GOOGLE_SITE_VERIFICATION
+        ? `<meta name="google-site-verification" content="${process.env.GOOGLE_SITE_VERIFICATION}" />`
+        : ""
+    );
 
   res.send(html);
 });
