@@ -604,11 +604,6 @@ function bindGlobalEvents() {
     renderMenu(state.categorias);
   });
 
-  document.getElementById("btnWhats").addEventListener("click", () => {
-    const numero = state.loja?.whatsapp || "";
-    window.open(`https://wa.me/${numero}`, "_blank");
-  });
-
   document.getElementById("btnRepetir").addEventListener("click", () => {
     const ultimo = JSON.parse(localStorage.getItem("ultimo_pedido") || "null");
     if (!ultimo || !ultimo.length) {

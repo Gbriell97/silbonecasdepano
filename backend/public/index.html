@@ -55,7 +55,20 @@
 <!-- Redes sociais -->
 <div class="social-row" id="socialRow" hidden>
   <a href="#" id="socialInsta" class="social-btn" target="_blank" rel="noopener" hidden>
-    <span>📷</span> Seguir no Instagram
+    <svg class="icon-social" viewBox="0 0 24 24" aria-hidden="true">
+      <defs>
+        <linearGradient id="igGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#FFDD55"/>
+          <stop offset="35%" stop-color="#FF543E"/>
+          <stop offset="70%" stop-color="#C837AB"/>
+          <stop offset="100%" stop-color="#7048E8"/>
+        </linearGradient>
+      </defs>
+      <rect x="1" y="1" width="22" height="22" rx="6" fill="url(#igGrad)"/>
+      <circle cx="12" cy="12" r="5" fill="none" stroke="#fff" stroke-width="1.6"/>
+      <circle cx="17.4" cy="6.6" r="1.15" fill="#fff"/>
+    </svg>
+    Seguir no Instagram
   </a>
 </div>
 
@@ -63,9 +76,6 @@
 <div class="quick-actions">
   <button class="quick-btn" id="btnRepetir">
     <span class="quick-icon">🔁</span> Peça de novo
-  </button>
-  <button class="quick-btn" id="btnWhats">
-    <span class="quick-icon">💬</span> Fale conosco
   </button>
   <button class="quick-btn cart" id="cartToggle">
     <span class="quick-icon">🧾</span> Carrinho
@@ -205,7 +215,10 @@
 
 <!-- Botão flutuante do WhatsApp -->
 <a href="#" id="whatsappFloat" class="whatsapp-float" target="_blank" rel="noopener" hidden aria-label="Falar no WhatsApp">
-  💬
+  <svg class="icon-whats" viewBox="0 0 24 24" aria-hidden="true" fill="#fff">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+    <path d="M12.001 2.001C6.478 2.001 2 6.479 2 12.001c0 1.987.583 3.816 1.598 5.362L2 22l4.798-1.573A9.936 9.936 0 0012.001 22c5.523 0 10.001-4.478 10.001-9.999C22.002 6.479 17.524 2.001 12.001 2.001zm0 18.176a8.13 8.13 0 01-4.146-1.135l-.297-.176-3.093.826.826-3.017-.194-.31A8.13 8.13 0 013.837 12.02c0-4.49 3.653-8.143 8.16-8.143 4.49 0 8.143 3.653 8.143 8.143 0 4.507-3.653 8.157-8.14 8.157z"/>
+  </svg>
 </a>
 
 <!-- Barra de navegação inferior -->
