@@ -1,5 +1,5 @@
 const state = {
-  senha: sessionStorage.getItem("admin_senha") || "",
+  autenticado: false,
   categorias: [],
   editandoId: null, // null = criando novo produto
 };
@@ -11,12 +11,10 @@ function fmt(v) {
 function configurarIconesApp(logo) {
   if (!logo) return;
   const logoUrl = `/img/${logo}`;
-
   const favicon = document.createElement("link");
   favicon.rel = "icon";
   favicon.href = logoUrl;
   document.head.appendChild(favicon);
-
   const appleIcon = document.createElement("link");
   appleIcon.rel = "apple-touch-icon";
   appleIcon.href = logoUrl;
@@ -24,22 +22,15 @@ function configurarIconesApp(logo) {
 }
 
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
-  });
+  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
 }
 
 async function apiAdmin(path, options = {}) {
-  const resp = await fetch(path, {
-    ...options,
-    headers: {
-      ...(options.headers || {}),
-      "x-admin-senha": state.senha,
-    },
-  });
+  const resp = await fetch(path, { credentials: "same-origin", ...options });
   if (resp.status === 401) {
-    sessionStorage.removeItem("admin_senha");
-    location.reload();
+    state.autenticado = false;
+    document.getElementById("adminPanel").hidden = true;
+    document.getElementById("loginScreen").hidden = false;
     throw new Error("Sessão expirada");
   }
   const data = await resp.json().catch(() => ({}));
@@ -47,13 +38,15 @@ async function apiAdmin(path, options = {}) {
   return data;
 }
 
-// ---------- Login ----------
-
-function checarLogin() {
-  if (state.senha) {
+async function checarLogin() {
+  try {
+    await apiAdmin("/api/admin/sessao");
+    state.autenticado = true;
     mostrarPainel();
-  } else {
+  } catch {
+    state.autenticado = false;
     document.getElementById("loginScreen").hidden = false;
+    document.getElementById("adminPanel").hidden = true;
   }
 }
 
@@ -62,25 +55,26 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
   const senha = document.getElementById("senhaInput").value;
   const erroEl = document.getElementById("loginErro");
   erroEl.textContent = "";
-
   try {
     const resp = await fetch("/api/admin/login", {
       method: "POST",
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ senha }),
     });
-    if (!resp.ok) throw new Error("Senha incorreta.");
-
-    state.senha = senha;
-    sessionStorage.setItem("admin_senha", senha);
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.erro || "Senha incorreta.");
+    document.getElementById("senhaInput").value = "";
+    state.autenticado = true;
     mostrarPainel();
   } catch (err) {
     erroEl.textContent = err.message;
   }
 });
 
-document.getElementById("btnLogout").addEventListener("click", () => {
-  sessionStorage.removeItem("admin_senha");
+document.getElementById("btnLogout").addEventListener("click", async () => {
+  try { await fetch("/api/admin/logout", { method: "POST", credentials: "same-origin" }); } catch {}
+  state.autenticado = false;
   location.reload();
 });
 

@@ -2,15 +2,13 @@ const path = require("path");
 const fs = require("fs");
 const Database = require("better-sqlite3");
 
-// Se DATA_DIR estiver definida (ex: disco persistente do Render), usa ela.
-// Caso contrário, usa a pasta local "data" (só para desenvolvimento).
 const dataDir = process.env.DATA_DIR || path.join(__dirname, "data");
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
 const db = new Database(path.join(dataDir, "cardapio.db"));
 db.pragma("journal_mode = WAL");
+db.pragma("foreign_keys = ON");
+db.pragma("busy_timeout = 5000");
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS categorias (
@@ -44,6 +42,18 @@ CREATE TABLE IF NOT EXISTS pedidos (
   total REAL NOT NULL,
   itens_json TEXT NOT NULL,
   criado_em TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS pedido_itens (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  pedido_id INTEGER NOT NULL,
+  produto_id INTEGER,
+  nome_produto TEXT NOT NULL,
+  preco_unitario REAL NOT NULL,
+  quantidade INTEGER NOT NULL,
+  subtotal REAL NOT NULL,
+  FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE,
+  FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS loja_config (
@@ -87,16 +97,22 @@ CREATE TABLE IF NOT EXISTS visitas (
   pagina TEXT NOT NULL DEFAULT 'home',
   criado_em TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
+
+CREATE INDEX IF NOT EXISTS idx_produtos_categoria_disponivel ON produtos(categoria_id, disponivel);
+CREATE INDEX IF NOT EXISTS idx_produto_fotos_produto_ordem ON produto_fotos(produto_id, ordem, id);
+CREATE INDEX IF NOT EXISTS idx_pedidos_status_criado ON pedidos(status, criado_em);
+CREATE INDEX IF NOT EXISTS idx_pedido_itens_pedido ON pedido_itens(pedido_id);
+CREATE INDEX IF NOT EXISTS idx_visitas_criado ON visitas(criado_em);
 `);
 
-// Migrações leves: adiciona colunas novas em bancos já existentes (versões antigas do app)
 function tentarAdicionarColuna(tabela, definicaoColuna) {
   try {
     db.exec(`ALTER TABLE ${tabela} ADD COLUMN ${definicaoColuna}`);
   } catch (e) {
-    // Coluna já existe — ignora
+    if (!/duplicate column name/i.test(String(e.message))) throw e;
   }
 }
+
 tentarAdicionarColuna("categorias", "icone TEXT");
 tentarAdicionarColuna("produtos", "imagem_pos TEXT NOT NULL DEFAULT '50% 50%'");
 tentarAdicionarColuna("loja_config", "capa1_pos TEXT NOT NULL DEFAULT '50% 50%'");
@@ -106,23 +122,19 @@ tentarAdicionarColuna("produtos", "tipo_entrega TEXT NOT NULL DEFAULT 'pronta'")
 tentarAdicionarColuna("produtos", "prazo_producao TEXT NOT NULL DEFAULT ''");
 tentarAdicionarColuna("loja_config", "instagram TEXT NOT NULL DEFAULT ''");
 
-// Migra fotos que já estavam no campo antigo "imagem" para a nova tabela produto_fotos,
-// caso ainda não tenham sido migradas (garante compatibilidade com bancos já em uso)
 const produtosComFotoAntiga = db
   .prepare("SELECT id, imagem, imagem_pos FROM produtos WHERE imagem IS NOT NULL AND imagem != ''")
   .all();
+const contarFotos = db.prepare("SELECT COUNT(*) AS c FROM produto_fotos WHERE produto_id = ?");
+const inserirFotoAntiga = db.prepare(
+  "INSERT INTO produto_fotos (produto_id, arquivo, posicao, ordem) VALUES (?, ?, ?, 0)"
+);
 for (const produto of produtosComFotoAntiga) {
-  const jaTemFoto = db.prepare("SELECT COUNT(*) AS c FROM produto_fotos WHERE produto_id = ?").get(produto.id).c;
-  if (!jaTemFoto) {
-    db.prepare("INSERT INTO produto_fotos (produto_id, arquivo, posicao, ordem) VALUES (?, ?, ?, 0)").run(
-      produto.id,
-      produto.imagem,
-      produto.imagem_pos || "50% 50%"
-    );
+  if (!contarFotos.get(produto.id).c) {
+    inserirFotoAntiga.run(produto.id, produto.imagem, produto.imagem_pos || "50% 50%");
   }
 }
 
-// Seed da configuração da loja (linha única, id fixo = 1)
 const configExiste = db.prepare("SELECT COUNT(*) AS c FROM loja_config WHERE id = 1").get().c;
 if (!configExiste) {
   const horariosPadrao = {
@@ -138,7 +150,7 @@ if (!configExiste) {
     `INSERT INTO loja_config (id, nome, tagline, cor_primaria, texto_entrega, sempre_aberto, horarios_json)
      VALUES (1, ?, ?, ?, ?, 1, ?)`
   ).run(
-    "Sabor Express",
+    process.env.NOME_LOJA || "Sabor Express",
     "Comida boa, feita com carinho.",
     "#e8a33d",
     "Entrega em até 40 min",
@@ -146,7 +158,6 @@ if (!configExiste) {
   );
 }
 
-// Seed inicial (apenas se o banco estiver vazio)
 const count = db.prepare("SELECT COUNT(*) AS c FROM categorias").get().c;
 if (count === 0) {
   const insertCategoria = db.prepare("INSERT INTO categorias (nome, ordem) VALUES (?, ?)");
@@ -168,5 +179,37 @@ if (count === 0) {
   insertProduto.run(catBebidas, "Suco Natural", "500ml, feito na hora", 9.0, "suco.jpg");
   insertProduto.run(catSobremesas, "Pudim de Leite", "Fatia individual", 8.0, "pudim.jpg");
 }
+
+// Migra pedidos antigos para a tabela normalizada, sem apagar o itens_json usado pelo frontend atual.
+const pedidosSemItensNormalizados = db.prepare(`
+  SELECT p.id, p.itens_json
+  FROM pedidos p
+  WHERE NOT EXISTS (SELECT 1 FROM pedido_itens pi WHERE pi.pedido_id = p.id)
+`).all();
+const inserirPedidoItem = db.prepare(`
+  INSERT INTO pedido_itens
+    (pedido_id, produto_id, nome_produto, preco_unitario, quantidade, subtotal)
+  VALUES (?, ?, ?, ?, ?, ?)
+`);
+const normalizarPedidos = db.transaction(() => {
+  for (const pedido of pedidosSemItensNormalizados) {
+    let itens;
+    try { itens = JSON.parse(pedido.itens_json || "[]"); } catch { itens = []; }
+    for (const item of Array.isArray(itens) ? itens : []) {
+      const quantidade = Number(item.quantidade);
+      const preco = Number(item.preco);
+      if (!Number.isInteger(quantidade) || quantidade <= 0 || !Number.isFinite(preco) || preco < 0) continue;
+      inserirPedidoItem.run(
+        pedido.id,
+        Number.isInteger(Number(item.id)) ? Number(item.id) : null,
+        String(item.nome || "Produto"),
+        preco,
+        quantidade,
+        Number((preco * quantidade).toFixed(2))
+      );
+    }
+  }
+});
+normalizarPedidos();
 
 module.exports = db;

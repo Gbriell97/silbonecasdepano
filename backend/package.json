@@ -1,7 +1,7 @@
 {
   "name": "cardapio-site",
-  "version": "1.0.0",
-  "description": "Site de cardapio digital com carrinho, checkout via WhatsApp e integracao de pagamento (Pix/Mercado Pago)",
+  "version": "2.1.0",
+  "description": "Cardápio digital V2.1 com autenticação por sessão, pedidos validados e imagens de alta qualidade otimizadas automaticamente",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
@@ -13,6 +13,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "sharp": "^0.34.3"
   }
 }
