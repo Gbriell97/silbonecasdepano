@@ -35,12 +35,11 @@ async function apiAdmin(path, options = {}) {
     credentials: "same-origin",
     headers: { ...(options.headers || {}) },
   });
-  if (resp.status === 401) {
-    state.autenticado = false;
-    location.reload();
-    throw new Error("Sessão expirada");
-  }
   const data = await resp.json().catch(() => ({}));
+  if (resp.status === 401) {
+    mostrarLogin(data.erro || "Sessão expirada. Faça login novamente.", true);
+    throw new Error(data.erro || "Sessão expirada.");
+  }
   if (!resp.ok) throw new Error(data.erro || "Erro na requisição");
   return data;
 }
@@ -49,11 +48,19 @@ async function apiAdmin(path, options = {}) {
 
 async function checarLogin() {
   try {
-    await apiAdmin("/api/admin/sessao");
+    // Não use apiAdmin aqui: receber 401 antes do login é esperado e não deve
+    // provocar recarga/redirecionamento da página de autenticação.
+    const resp = await fetch("/api/admin/me", { credentials: "same-origin" });
+    if (!resp.ok) {
+      mostrarLogin();
+      return;
+    }
     state.autenticado = true;
     mostrarPainel();
   } catch {
-    document.getElementById("loginScreen").hidden = false;
+    // Se a rede estiver indisponível, o formulário continua acessível para
+    // que o usuário possa tentar novamente quando a conexão voltar.
+    mostrarLogin("Não foi possível verificar a sessão. Tente entrar novamente.");
   }
 }
 
@@ -66,12 +73,14 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
   try {
     const resp = await fetch("/api/admin/login", {
       method: "POST",
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ senha }),
     });
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok) throw new Error(data.erro || "Senha incorreta.");
     state.autenticado = true;
+    document.getElementById("senhaInput").value = "";
     mostrarPainel();
   } catch (err) {
     erroEl.textContent = err.message;
@@ -80,13 +89,21 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
 
 document.getElementById("btnLogout").addEventListener("click", async () => {
   await fetch("/api/admin/logout", { method: "POST", credentials: "same-origin" }).catch(() => {});
-  location.reload();
+  mostrarLogin();
 });
 
 function mostrarPainel() {
   document.getElementById("loginScreen").hidden = true;
   document.getElementById("adminPanel").hidden = false;
   carregarTudo();
+}
+
+function mostrarLogin(mensagem = "", focarSenha = false) {
+  state.autenticado = false;
+  document.getElementById("adminPanel").hidden = true;
+  document.getElementById("loginScreen").hidden = false;
+  document.getElementById("loginErro").textContent = mensagem;
+  if (focarSenha) requestAnimationFrame(() => document.getElementById("senhaInput").focus());
 }
 
 // ---------- Navegação por abas ----------

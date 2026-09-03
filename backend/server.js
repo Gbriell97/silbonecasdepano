@@ -53,7 +53,7 @@ app.use(cors({
 }));
 app.use(express.json({ limit: "100kb" }));
 
-app.get("/api/health", (req, res) => res.json({ ok: true, version: "2.1.0" }));
+app.get("/api/health", (req, res) => res.json({ ok: true, version: "2.2.1" }));
 
 // -------------------- Segurança / sessão --------------------
 const sessoes = new Map();
@@ -443,8 +443,12 @@ app.get("/sitemap.xml", (req, res) => {
   const url = baseUrl(req);
   res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${url}/</loc></url></urlset>`);
 });
+// A página administrativa é pública; a proteção é aplicada exclusivamente às
+// rotas da API que alteram ou consultam dados administrativos.
+app.get(["/admin", "/admin.html"], (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
+});
 app.use(express.static(path.join(__dirname, "public")));
-app.get("/admin", (req, res) => res.sendFile(path.join(__dirname, "public", "admin.html")));
 
 function montarManifest({ startUrl, sufixoNome }) {
   const configLoja = db.prepare("SELECT * FROM loja_config WHERE id = 1").get();
@@ -564,7 +568,12 @@ app.post("/api/admin/login", (req, res) => {
 });
 
 app.post("/api/admin/logout", (req, res) => { destruirSessao(req, res); res.json({ ok: true }); });
-app.get("/api/admin/sessao", checarSessaoAdmin, (req, res) => res.json({ autenticado: true }));
+
+// Mantemos /sessao por compatibilidade com instalações anteriores. O painel
+// atual usa /me como ponto único para validar a sessão antes de abrir os dados.
+app.get(["/api/admin/me", "/api/admin/sessao"], checarSessaoAdmin, (req, res) => {
+  res.json({ autenticado: true });
+});
 
 app.get("/api/admin/pedidos", checarSessaoAdmin, (req, res) => {
   const pedidos = db.prepare("SELECT * FROM pedidos ORDER BY id DESC LIMIT 200").all();
@@ -777,4 +786,4 @@ app.use((err, req, res, next) => {
   res.status(500).json({ erro: "Erro interno do servidor." });
 });
 
-app.listen(PORT, () => console.log(`Backend V2.1 rodando em http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Backend V2.2.1 rodando em http://localhost:${PORT}`));
