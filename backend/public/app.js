@@ -65,7 +65,7 @@ function renderDepoimentos(depoimentos) {
     .map(
       (d) => `
     <div class="depoimento-card">
-      ${d.foto ? `<img src="/img/${d.foto}" alt="Trabalho realizado" onerror="this.remove()" />` : `<div class="depoimento-sem-foto">🧵</div>`}
+      ${d.media ? (d.media_tipo === "video" ? `<video src="/img/${d.media}" controls muted playsinline preload="metadata"></video>` : `<img src="/img/${d.media}" alt="Trabalho realizado" onerror="this.remove()" />`) : (d.foto ? `<img src="/img/${d.foto}" alt="Trabalho realizado" onerror="this.remove()" />` : `<div class="depoimento-sem-foto">🧵</div>`)}
       <p class="depoimento-texto">${d.texto ? `"${d.texto}"` : ""}</p>
       <span class="depoimento-nome">— ${d.nome_cliente}</span>
     </div>
@@ -75,8 +75,9 @@ function renderDepoimentos(depoimentos) {
 }
 
 function configurarIconesApp(loja) {
-  if (!loja.logo) return;
-  const logoUrl = `/img/${loja.logo}`;
+  const logo = typeof loja === "string" ? loja : loja?.logo;
+  if (!logo) return;
+  const logoUrl = "/favicon.png";
 
   const favicon = document.createElement("link");
   favicon.rel = "icon";
@@ -99,7 +100,9 @@ function renderCapa(loja) {
   const cover = document.getElementById("cover");
   if (loja.capas && loja.capas.length) {
     cover.innerHTML = loja.capas
-      .map((c) => `<img src="/img/${c.arquivo}" style="object-position: ${c.posicao || "50% 50%"}" onerror="this.remove()" />`)
+      .map((c) => c.tipo === "video"
+        ? `<video src="/img/${c.arquivo}" autoplay muted loop playsinline preload="metadata"></video>`
+        : `<img src="/img/${c.arquivo}" style="object-position: ${c.posicao || "50% 50%"}" onerror="this.remove()" />`)
       .join("");
   } else {
     cover.innerHTML = `<div class="cover-placeholder">📷</div>`;

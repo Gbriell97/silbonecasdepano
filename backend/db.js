@@ -67,6 +67,9 @@ CREATE TABLE IF NOT EXISTS loja_config (
   capa1_pos TEXT NOT NULL DEFAULT '50% 50%',
   capa2_pos TEXT NOT NULL DEFAULT '50% 50%',
   capa3_pos TEXT NOT NULL DEFAULT '50% 50%',
+  capa1_tipo TEXT NOT NULL DEFAULT 'image',
+  capa2_tipo TEXT NOT NULL DEFAULT 'image',
+  capa3_tipo TEXT NOT NULL DEFAULT 'image',
   cor_primaria TEXT NOT NULL DEFAULT '#e8a33d',
   endereco TEXT NOT NULL DEFAULT '',
   texto_entrega TEXT NOT NULL DEFAULT '',
@@ -89,6 +92,8 @@ CREATE TABLE IF NOT EXISTS depoimentos (
   nome_cliente TEXT NOT NULL,
   texto TEXT NOT NULL DEFAULT '',
   foto TEXT,
+  media TEXT,
+  media_tipo TEXT NOT NULL DEFAULT 'image',
   ordem INTEGER NOT NULL DEFAULT 0
 );
 
@@ -121,6 +126,11 @@ tentarAdicionarColuna("loja_config", "capa3_pos TEXT NOT NULL DEFAULT '50% 50%'"
 tentarAdicionarColuna("produtos", "tipo_entrega TEXT NOT NULL DEFAULT 'pronta'");
 tentarAdicionarColuna("produtos", "prazo_producao TEXT NOT NULL DEFAULT ''");
 tentarAdicionarColuna("loja_config", "instagram TEXT NOT NULL DEFAULT ''");
+tentarAdicionarColuna("loja_config", "capa1_tipo TEXT NOT NULL DEFAULT 'image'");
+tentarAdicionarColuna("loja_config", "capa2_tipo TEXT NOT NULL DEFAULT 'image'");
+tentarAdicionarColuna("loja_config", "capa3_tipo TEXT NOT NULL DEFAULT 'image'");
+tentarAdicionarColuna("depoimentos", "media TEXT");
+tentarAdicionarColuna("depoimentos", "media_tipo TEXT NOT NULL DEFAULT 'image'");
 
 const produtosComFotoAntiga = db
   .prepare("SELECT id, imagem, imagem_pos FROM produtos WHERE imagem IS NOT NULL AND imagem != ''")

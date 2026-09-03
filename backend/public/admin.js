@@ -11,10 +11,12 @@ function fmt(v) {
 function configurarIconesApp(logo) {
   if (!logo) return;
   const logoUrl = `/img/${logo}`;
+
   const favicon = document.createElement("link");
   favicon.rel = "icon";
   favicon.href = logoUrl;
   document.head.appendChild(favicon);
+
   const appleIcon = document.createElement("link");
   appleIcon.rel = "apple-touch-icon";
   appleIcon.href = logoUrl;
@@ -22,15 +24,20 @@ function configurarIconesApp(logo) {
 }
 
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
 }
 
 async function apiAdmin(path, options = {}) {
-  const resp = await fetch(path, { credentials: "same-origin", ...options });
+  const resp = await fetch(path, {
+    ...options,
+    credentials: "same-origin",
+    headers: { ...(options.headers || {}) },
+  });
   if (resp.status === 401) {
     state.autenticado = false;
-    document.getElementById("adminPanel").hidden = true;
-    document.getElementById("loginScreen").hidden = false;
+    location.reload();
     throw new Error("Sessão expirada");
   }
   const data = await resp.json().catch(() => ({}));
@@ -38,15 +45,15 @@ async function apiAdmin(path, options = {}) {
   return data;
 }
 
+// ---------- Login ----------
+
 async function checarLogin() {
   try {
     await apiAdmin("/api/admin/sessao");
     state.autenticado = true;
     mostrarPainel();
   } catch {
-    state.autenticado = false;
     document.getElementById("loginScreen").hidden = false;
-    document.getElementById("adminPanel").hidden = true;
   }
 }
 
@@ -55,16 +62,15 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
   const senha = document.getElementById("senhaInput").value;
   const erroEl = document.getElementById("loginErro");
   erroEl.textContent = "";
+
   try {
     const resp = await fetch("/api/admin/login", {
       method: "POST",
-      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ senha }),
     });
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok) throw new Error(data.erro || "Senha incorreta.");
-    document.getElementById("senhaInput").value = "";
     state.autenticado = true;
     mostrarPainel();
   } catch (err) {
@@ -73,8 +79,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
 });
 
 document.getElementById("btnLogout").addEventListener("click", async () => {
-  try { await fetch("/api/admin/logout", { method: "POST", credentials: "same-origin" }); } catch {}
-  state.autenticado = false;
+  await fetch("/api/admin/logout", { method: "POST", credentials: "same-origin" }).catch(() => {});
   location.reload();
 });
 
@@ -174,13 +179,13 @@ document.getElementById("cropBackdrop").addEventListener("click", fecharRecorte)
 document.getElementById("btnCropConfirmar").addEventListener("click", () => {
   if (!cropperInstance || !cropOnConfirm) return;
   const callback = cropOnConfirm;
-  cropperInstance.getCroppedCanvas({ maxWidth: 1400, maxHeight: 1400 }).toBlob(
+  cropperInstance.getCroppedCanvas({ maxWidth: 2400, maxHeight: 2400, imageSmoothingEnabled: true, imageSmoothingQuality: "high" }).toBlob(
     (blob) => {
       fecharRecorte();
       callback(blob);
     },
     "image/jpeg",
-    0.9
+    0.95
   );
 });
 
@@ -211,9 +216,18 @@ async function carregarLoja() {
     ["capa1", "capa2", "capa3"].forEach((campo, i) => {
       if (loja[campo]) {
         const img = document.getElementById(`previewCapa${i + 1}`);
-        img.src = `/img/${loja[campo]}`;
-        img.style.objectPosition = loja[`${campo}_pos`] || "50% 50%";
-        img.hidden = false;
+        const tipo = loja[`${campo}_tipo`] || "image";
+        if (tipo === "video") {
+          const slot = img.parentElement;
+          img.hidden = true;
+          const v = document.createElement("video");
+          v.className = "preview-capa"; v.src = `/img/${loja[campo]}`; v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true; v.controls = true;
+          slot.insertBefore(v, img);
+        } else {
+          img.src = `/img/${loja[campo]}`;
+          img.style.objectPosition = loja[`${campo}_pos`] || "50% 50%";
+          img.hidden = false;
+        }
       }
     });
 
@@ -332,6 +346,28 @@ document.getElementById("inputLogo").addEventListener("change", (e) => {
   document.getElementById(`input${campo[0].toUpperCase()}${campo.slice(1)}`).addEventListener("change", (e) => {
     const arquivo = e.target.files[0];
     if (!arquivo) return;
+    if (arquivo.type.startsWith("video/")) {
+      if (arquivo.size > 50 * 1024 * 1024) { alert("O vídeo deve ter no máximo 50 MB."); e.target.value = ""; return; }
+      const previewUrl = URL.createObjectURL(arquivo);
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.onloadedmetadata = async () => {
+        URL.revokeObjectURL(previewUrl);
+        if (video.duration > 30.05) { alert("O vídeo deve ter no máximo 30 segundos."); e.target.value = ""; return; }
+        try {
+          await enviarImagemLoja(campo, arquivo);
+          const slot = document.getElementById(`previewCapa${i + 1}`).parentElement;
+          slot.querySelectorAll("img.preview-capa, video.preview-capa").forEach((el) => el.remove());
+          const v = document.createElement("video");
+          v.className = "preview-capa"; v.src = URL.createObjectURL(arquivo); v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true;
+          slot.insertBefore(v, slot.firstChild);
+        } catch (err) { alert("Erro ao enviar vídeo de capa: " + err.message); }
+        finally { e.target.value = ""; }
+      };
+      video.onerror = () => { URL.revokeObjectURL(previewUrl); alert("Não foi possível ler o vídeo."); e.target.value = ""; };
+      video.src = previewUrl;
+      return;
+    }
     abrirRecorte(arquivo, 4 / 3, async (blob) => {
       try {
         await enviarImagemLoja(campo, blob);
@@ -339,11 +375,8 @@ document.getElementById("inputLogo").addEventListener("change", (e) => {
         img.src = URL.createObjectURL(blob);
         img.style.objectPosition = "50% 50%";
         img.hidden = false;
-      } catch (err) {
-        alert("Erro ao enviar foto de capa: " + err.message);
-      } finally {
-        e.target.value = "";
-      }
+      } catch (err) { alert("Erro ao enviar foto de capa: " + err.message); }
+      finally { e.target.value = ""; }
     });
   });
 
@@ -448,9 +481,9 @@ async function carregarDepoimentosAdmin() {
         (d) => `
       <div class="depoimento-admin-card">
         <div class="depoimento-admin-foto">
-          ${d.foto ? `<img src="/img/${d.foto}" />` : `<div class="depoimento-admin-sem-foto">🧵</div>`}
-          <input type="file" accept="image/*" data-foto-depo="${d.id}" hidden />
-          <button type="button" class="btn-mini" data-trocar-foto-depo="${d.id}">Foto</button>
+          ${d.media ? (d.media_tipo === "video" ? `<video src="/img/${d.media}" controls muted playsinline></video>` : `<img src="/img/${d.media}" />`) : (d.foto ? `<img src="/img/${d.foto}" />` : `<div class="depoimento-admin-sem-foto">🧵</div>`)}
+          <input type="file" accept="image/*,video/mp4,video/webm" data-foto-depo="${d.id}" hidden />
+          <button type="button" class="btn-mini" data-trocar-foto-depo="${d.id}">Mídia</button>
         </div>
         <div class="depoimento-admin-info">
           <strong>${d.nome_cliente}</strong>
@@ -472,17 +505,21 @@ async function carregarDepoimentosAdmin() {
         const arquivo = e.target.files[0];
         if (!arquivo) return;
         const id = input.dataset.fotoDepo;
+        if (arquivo.type.startsWith("video/")) {
+          if (arquivo.size > 50 * 1024 * 1024) { alert("O vídeo deve ter no máximo 50 MB."); e.target.value = ""; return; }
+          const url = URL.createObjectURL(arquivo); const v = document.createElement("video"); v.preload = "metadata";
+          v.onloadedmetadata = async () => {
+            URL.revokeObjectURL(url);
+            if (v.duration > 30.05) { alert("O vídeo deve ter no máximo 30 segundos."); e.target.value = ""; return; }
+            try { const fd = new FormData(); fd.append("imagem", arquivo, arquivo.name); await apiAdmin(`/api/admin/depoimentos/${id}/foto`, { method: "POST", body: fd }); await carregarDepoimentosAdmin(); }
+            catch (err) { alert("Erro ao enviar vídeo: " + err.message); } finally { e.target.value = ""; }
+          };
+          v.onerror = () => { URL.revokeObjectURL(url); alert("Não foi possível ler o vídeo."); e.target.value = ""; };
+          v.src = url; return;
+        }
         abrirRecorte(arquivo, NaN, async (blob) => {
-          try {
-            const formData = new FormData();
-            formData.append("imagem", blob, "foto.jpg");
-            await apiAdmin(`/api/admin/depoimentos/${id}/foto`, { method: "POST", body: formData });
-            await carregarDepoimentosAdmin();
-          } catch (err) {
-            alert("Erro ao enviar foto: " + err.message);
-          } finally {
-            e.target.value = "";
-          }
+          try { const formData = new FormData(); formData.append("imagem", blob, "foto.jpg"); await apiAdmin(`/api/admin/depoimentos/${id}/foto`, { method: "POST", body: formData }); await carregarDepoimentosAdmin(); }
+          catch (err) { alert("Erro ao enviar foto: " + err.message); } finally { e.target.value = ""; }
         });
       });
     });

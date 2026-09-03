@@ -6,6 +6,10 @@ const fs = require("fs");
 const crypto = require("crypto");
 const multer = require("multer");
 const sharp = require("sharp");
+const ffprobe = require("ffprobe-static");
+const { execFile } = require("child_process");
+const { promisify } = require("util");
+const execFileAsync = promisify(execFile);
 const db = require("./db");
 
 const app = express();
@@ -155,6 +159,10 @@ const EXTENSOES = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 const MIMES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const WEBP_QUALITY = 92;
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+const MAX_VIDEO_SECONDS = 30;
+const VIDEO_EXTENSOES = new Set([".mp4", ".webm"]);
+const VIDEO_MIMES = new Set(["video/mp4", "video/webm"]);
 
 function validarArquivoImagem(file) {
   const ext = path.extname(file.originalname || "").toLowerCase();
@@ -172,6 +180,62 @@ function criarUpload() {
 const upload = criarUpload();
 const uploadLoja = criarUpload();
 const uploadDepoimento = criarUpload();
+
+function criarUploadMidia() {
+  return multer({
+    storage: multer.memoryStorage(),
+    fileFilter: (req, file, cb) => {
+      const ext = path.extname(file.originalname || "").toLowerCase();
+      const imagem = EXTENSOES.has(ext) && MIMES.has(file.mimetype);
+      const video = VIDEO_EXTENSOES.has(ext) && VIDEO_MIMES.has(file.mimetype);
+      cb(null, imagem || video);
+    },
+    limits: { fileSize: Math.max(MAX_UPLOAD_BYTES, MAX_VIDEO_BYTES), files: 1 },
+  });
+}
+
+const uploadMidia = criarUploadMidia();
+
+async function validarDuracaoVideo(buffer, originalname) {
+  const ext = path.extname(originalname || ".mp4").toLowerCase();
+  const temp = path.join(dataRoot, `.video-check-${crypto.randomBytes(12).toString("hex")}${ext}`);
+  try {
+    await fs.promises.writeFile(temp, buffer);
+    const { stdout } = await execFileAsync(ffprobe.path, ["-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", temp], { timeout: 15000 });
+    const duration = Number.parseFloat(String(stdout).trim());
+    if (!Number.isFinite(duration) || duration <= 0) throw new Error("Duração inválida.");
+    if (duration > MAX_VIDEO_SECONDS + 0.05) throw new Error(`O vídeo deve ter no máximo ${MAX_VIDEO_SECONDS} segundos.`);
+    return duration;
+  } finally {
+    await fs.promises.rm(temp, { force: true }).catch(() => {});
+  }
+}
+
+async function processarUploadMidia(req, res, next) {
+  if (!req.file) return next();
+  const ext = path.extname(req.file.originalname || "").toLowerCase();
+  const isVideo = VIDEO_EXTENSOES.has(ext) && VIDEO_MIMES.has(req.file.mimetype);
+  if (!isVideo && req.file.size > MAX_UPLOAD_BYTES) return res.status(400).json({ erro: "Imagem muito grande. O limite é 10 MB." });
+  if (isVideo) {
+    if (req.file.size > MAX_VIDEO_BYTES) return res.status(400).json({ erro: "Vídeo muito grande. O limite é 50 MB." });
+    try {
+      const duration = await validarDuracaoVideo(req.file.buffer, req.file.originalname);
+      const base = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString("hex");
+      const filename = `${base}${ext}`;
+      const originalFilename = `${base}.original${ext}`;
+      await fs.promises.writeFile(path.join(originalDir, originalFilename), req.file.buffer);
+      await fs.promises.writeFile(path.join(imgDir, filename), req.file.buffer);
+      req.file.filename = filename;
+      req.file.originalFilename = originalFilename;
+      req.file.mediaType = "video";
+      req.file.duration = Number(duration.toFixed(2));
+      return next();
+    } catch (err) {
+      return res.status(400).json({ erro: err.message || `Não foi possível validar o vídeo. O limite é ${MAX_VIDEO_SECONDS} segundos.` });
+    }
+  }
+  return otimizarImagemUpload(req, res, next);
+}
 
 async function otimizarImagemUpload(req, res, next) {
   try {
@@ -241,20 +305,11 @@ function removerArquivoSeguro(nome) {
 
 function uploadErrorHandler(err, req, res, next) {
   if (err instanceof multer.MulterError) {
-    if (err.code === "LIMIT_FILE_SIZE") return res.status(400).json({ erro: "Imagem muito grande. O limite é 10 MB." });
+    if (err.code === "LIMIT_FILE_SIZE") return res.status(400).json({ erro: "Arquivo muito grande. Imagens: 10 MB. Vídeos: 50 MB." });
     return res.status(400).json({ erro: `Upload inválido: ${err.message}` });
   }
-  if (err) return res.status(400).json({ erro: "Arquivo inválido. Use JPG, PNG ou WebP de até 10 MB." });
+  if (err) return res.status(400).json({ erro: "Arquivo inválido. Use JPG, PNG ou WebP de até 10 MB; ou MP4/WebM de até 50 MB e 30 segundos." });
   next();
-}
-
-function removerArquivoSeguro(nome) {
-  if (!nome) return;
-  const base = path.basename(nome);
-  const caminho = path.join(imgDir, base);
-  if (caminho.startsWith(path.resolve(imgDir) + path.sep) && fs.existsSync(caminho)) {
-    try { fs.unlinkSync(caminho); } catch (e) { console.warn("Não foi possível remover arquivo:", e.message); }
-  }
 }
 
 // -------------------- Utilidades --------------------
@@ -363,8 +418,21 @@ app.get("/", (req, res) => {
     .replace(/%%OG_IMAGEM%%/g, imagemUrl)
     .replace(/%%OG_URL%%/g, url)
     .replace(/%%JSON_LD%%/g, JSON.stringify(jsonLd).replace(/</g, "\\u003c"))
-    .replace(/%%GOOGLE_VERIFICATION%%/g, process.env.GOOGLE_SITE_VERIFICATION ? `<meta name="google-site-verification" content="${texto(process.env.GOOGLE_SITE_VERIFICATION, 200)}" />` : "");
+    .replace(/%%GOOGLE_VERIFICATION%%/g, process.env.GOOGLE_SITE_VERIFICATION ? `<meta name="google-site-verification" content="${texto(process.env.GOOGLE_SITE_VERIFICATION, 200)}" />` : "")
+    .replace(/%%FAVICON%%/g, `${url}/favicon.png`);
   res.send(html);
+});
+
+app.get("/favicon.png", async (req, res) => {
+  try {
+    const configLoja = db.prepare("SELECT logo FROM loja_config WHERE id = 1").get();
+    if (!configLoja?.logo) return res.status(404).end();
+    const caminho = path.join(imgDir, path.basename(configLoja.logo));
+    if (!fs.existsSync(caminho)) return res.status(404).end();
+    const png = await sharp(caminho, { failOn: "error" }).resize(64, 64, { fit: "cover" }).png().toBuffer();
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.type("png").send(png);
+  } catch { res.status(404).end(); }
 });
 
 app.get("/robots.txt", (req, res) => {
@@ -406,7 +474,7 @@ app.get("/api/loja", (req, res) => {
     nome: c.nome,
     tagline: c.tagline,
     logo: c.logo,
-    capas: [{ arquivo: c.capa1, posicao: c.capa1_pos }, { arquivo: c.capa2, posicao: c.capa2_pos }, { arquivo: c.capa3, posicao: c.capa3_pos }].filter((x) => x.arquivo),
+    capas: [{ arquivo: c.capa1, posicao: c.capa1_pos, tipo: c.capa1_tipo || "image" }, { arquivo: c.capa2, posicao: c.capa2_pos, tipo: c.capa2_tipo || "image" }, { arquivo: c.capa3, posicao: c.capa3_pos, tipo: c.capa3_tipo || "image" }].filter((x) => x.arquivo),
     corPrimaria: c.cor_primaria,
     endereco: c.endereco,
     textoEntrega: c.texto_entrega,
@@ -635,15 +703,23 @@ app.put("/api/admin/loja", checarSessaoAdmin, (req, res) => {
 });
 
 app.post("/api/admin/loja/imagem/:campo", checarSessaoAdmin, (req, res, next) => {
-  if (!["logo", "capa1", "capa2", "capa3"].includes(req.params.campo)) return res.status(400).json({ erro: "Campo de imagem inválido." });
-  next();
-}, uploadLoja.single("imagem"), otimizarImagemUpload, (req, res) => {
+  if (!["logo", "capa1", "capa2", "capa3"].includes(req.params.campo)) return res.status(400).json({ erro: "Campo inválido." });
+  if (req.params.campo === "logo") return uploadLoja.single("imagem")(req, res, (err) => err ? next(err) : otimizarImagemUpload(req, res, next));
+  return uploadMidia.single("imagem")(req, res, (err) => err ? next(err) : processarUploadMidia(req, res, next));
+}, (req, res) => {
   if (!req.file) return res.status(400).json({ erro: "Nenhum arquivo válido enviado." });
   const campo = req.params.campo;
   const atual = db.prepare("SELECT * FROM loja_config WHERE id=1").get();
   if (atual[campo]) removerArquivoSeguro(atual[campo]);
-  db.prepare(`UPDATE loja_config SET ${campo}=? WHERE id=1`).run(req.file.filename);
-  res.json({ ok: true, imagem: req.file.filename });
+  const tipo = req.file.mediaType === "video" ? "video" : "image";
+  if (tipo === "video" && campo === "logo") return res.status(400).json({ erro: "A logo deve ser uma imagem." });
+  const tipoCampo = `${campo}_tipo`;
+  if (["capa1_tipo", "capa2_tipo", "capa3_tipo"].includes(tipoCampo)) {
+    db.prepare(`UPDATE loja_config SET ${campo}=?, ${tipoCampo}=? WHERE id=1`).run(req.file.filename, tipo);
+  } else {
+    db.prepare(`UPDATE loja_config SET ${campo}=? WHERE id=1`).run(req.file.filename);
+  }
+  res.json({ ok: true, imagem: req.file.filename, tipo, duracao: req.file.duration || null });
 });
 app.put("/api/admin/loja/posicao/:campo", checarSessaoAdmin, (req, res) => {
   if (!["capa1", "capa2", "capa3"].includes(req.params.campo)) return res.status(400).json({ erro: "Campo inválido." });
@@ -673,15 +749,18 @@ app.delete("/api/admin/depoimentos/:id", checarSessaoAdmin, (req, res) => {
   if (!d) return res.status(404).json({ erro: "Depoimento não encontrado." });
   db.prepare("DELETE FROM depoimentos WHERE id=?").run(req.params.id);
   removerArquivoSeguro(d.foto);
+  removerArquivoSeguro(d.media);
   res.json({ ok: true });
 });
-app.post("/api/admin/depoimentos/:id/foto", checarSessaoAdmin, uploadDepoimento.single("imagem"), otimizarImagemUpload, (req, res) => {
-  if (!req.file) return res.status(400).json({ erro: "Nenhum arquivo válido enviado." });
+app.post("/api/admin/depoimentos/:id/foto", checarSessaoAdmin, uploadMidia.single("imagem"), processarUploadMidia, (req, res) => {
+  if (!req.file) return res.status(400).json({ erro: "Nenhuma imagem ou vídeo válido enviado." });
   const d = db.prepare("SELECT * FROM depoimentos WHERE id=?").get(req.params.id);
   if (!d) { removerArquivoSeguro(req.file.filename); return res.status(404).json({ erro: "Depoimento não encontrado." }); }
   removerArquivoSeguro(d.foto);
-  db.prepare("UPDATE depoimentos SET foto=? WHERE id=?").run(req.file.filename, req.params.id);
-  res.json({ ok: true, foto: req.file.filename });
+  removerArquivoSeguro(d.media);
+  const tipo = req.file.mediaType === "video" ? "video" : "image";
+  db.prepare("UPDATE depoimentos SET foto=NULL, media=?, media_tipo=? WHERE id=?").run(req.file.filename, tipo, req.params.id);
+  res.json({ ok: true, media: req.file.filename, tipo, duracao: req.file.duration || null });
 });
 
 app.get("/api/admin/visitas", checarSessaoAdmin, (req, res) => {
