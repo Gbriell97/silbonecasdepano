@@ -1,4 +1,4 @@
-# Cardápio Digital — V2.2.1
+# Cardápio Digital — V2.3
 
 Versão do projeto com segurança de sessão, pedidos validados, imagens em alta qualidade com otimização WebP, vídeos de até 30 segundos em capas e posts/depoimentos, e favicon dinâmico para buscadores.
 
@@ -8,6 +8,13 @@ Versão do projeto com segurança de sessão, pedidos validados, imagens em alta
 - A verificação de sessão usa `GET /api/admin/me`; sem sessão, ela mostra o formulário em vez de recarregar a página.
 - `POST /api/admin/login` cria o cookie de sessão HttpOnly; `GET /api/admin/me` e as demais rotas administrativas exigem sessão válida.
 - A rota `GET /api/admin/sessao` foi mantida por compatibilidade com instalações V2.2 anteriores.
+
+## Capa e painel administrativo (V2.3)
+
+- O topo do site usa somente uma capa: uma imagem ou um vídeo.
+- Vídeos de capa iniciam automaticamente, ficam sem som, em loop e sem controles visíveis.
+- O painel ganhou uma interface clara, responsiva e mais organizada.
+- As configurações antigas de segunda e terceira capa continuam preservadas no banco, mas não são exibidas nem podem ser alteradas pelo painel.
 
 ## Mídias
 

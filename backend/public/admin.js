@@ -230,23 +230,7 @@ async function carregarLoja() {
       document.getElementById("previewLogoFallback").hidden = true;
       configurarIconesApp(loja.logo);
     }
-    ["capa1", "capa2", "capa3"].forEach((campo, i) => {
-      if (loja[campo]) {
-        const img = document.getElementById(`previewCapa${i + 1}`);
-        const tipo = loja[`${campo}_tipo`] || "image";
-        if (tipo === "video") {
-          const slot = img.parentElement;
-          img.hidden = true;
-          const v = document.createElement("video");
-          v.className = "preview-capa"; v.src = `/img/${loja[campo]}`; v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true; v.controls = true;
-          slot.insertBefore(v, img);
-        } else {
-          img.src = `/img/${loja[campo]}`;
-          img.style.objectPosition = loja[`${campo}_pos`] || "50% 50%";
-          img.hidden = false;
-        }
-      }
-    });
+    if (loja.capa1) mostrarPreviewCapa(loja.capa1, loja.capa1_tipo || "image", loja.capa1_pos);
 
     let horarios = {};
     try {
@@ -359,8 +343,7 @@ document.getElementById("inputLogo").addEventListener("change", (e) => {
   });
 });
 
-["capa1", "capa2", "capa3"].forEach((campo, i) => {
-  document.getElementById(`input${campo[0].toUpperCase()}${campo.slice(1)}`).addEventListener("change", (e) => {
+document.getElementById("inputCapa1").addEventListener("change", (e) => {
     const arquivo = e.target.files[0];
     if (!arquivo) return;
     if (arquivo.type.startsWith("video/")) {
@@ -372,12 +355,8 @@ document.getElementById("inputLogo").addEventListener("change", (e) => {
         URL.revokeObjectURL(previewUrl);
         if (video.duration > 30.05) { alert("O vídeo deve ter no máximo 30 segundos."); e.target.value = ""; return; }
         try {
-          await enviarImagemLoja(campo, arquivo);
-          const slot = document.getElementById(`previewCapa${i + 1}`).parentElement;
-          slot.querySelectorAll("img.preview-capa, video.preview-capa").forEach((el) => el.remove());
-          const v = document.createElement("video");
-          v.className = "preview-capa"; v.src = URL.createObjectURL(arquivo); v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true;
-          slot.insertBefore(v, slot.firstChild);
+          await enviarImagemLoja("capa1", arquivo);
+          mostrarPreviewCapa(URL.createObjectURL(arquivo), "video");
         } catch (err) { alert("Erro ao enviar vídeo de capa: " + err.message); }
         finally { e.target.value = ""; }
       };
@@ -387,26 +366,23 @@ document.getElementById("inputLogo").addEventListener("change", (e) => {
     }
     abrirRecorte(arquivo, 4 / 3, async (blob) => {
       try {
-        await enviarImagemLoja(campo, blob);
-        const img = document.getElementById(`previewCapa${i + 1}`);
-        img.src = URL.createObjectURL(blob);
-        img.style.objectPosition = "50% 50%";
-        img.hidden = false;
+        await enviarImagemLoja("capa1", blob);
+        mostrarPreviewCapa(URL.createObjectURL(blob), "image", "50% 50%");
       } catch (err) { alert("Erro ao enviar foto de capa: " + err.message); }
       finally { e.target.value = ""; }
     });
-  });
+});
 
-  // Clique na prévia da capa ainda permite ajustar o foco fino, se precisar
-  const previewImg = document.getElementById(`previewCapa${i + 1}`);
-  previewImg.addEventListener("click", async (e) => {
+// Clique na prévia da capa permite ajustar o foco fino de imagens.
+const previewImg = document.getElementById("previewCapa1");
+previewImg.addEventListener("click", async (e) => {
     const rect = previewImg.getBoundingClientRect();
     const x = Math.round(((e.clientX - rect.left) / rect.width) * 100);
     const y = Math.round(((e.clientY - rect.top) / rect.height) * 100);
     const posicao = `${x}% ${y}%`;
     previewImg.style.objectPosition = posicao;
     try {
-      await apiAdmin(`/api/admin/loja/posicao/${campo}`, {
+      await apiAdmin("/api/admin/loja/posicao/capa1", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ posicao }),
@@ -414,8 +390,25 @@ document.getElementById("inputLogo").addEventListener("change", (e) => {
     } catch (err) {
       alert("Erro ao salvar enquadramento: " + err.message);
     }
-  });
 });
+
+function mostrarPreviewCapa(arquivo, tipo, posicao = "50% 50%") {
+  const img = document.getElementById("previewCapa1");
+  const slot = img.parentElement;
+  slot.querySelectorAll("video.preview-capa").forEach((el) => el.remove());
+  if (tipo === "video") {
+    img.hidden = true;
+    const video = document.createElement("video");
+    video.className = "preview-capa";
+    video.src = /^(\/|blob:|https?:)/.test(arquivo) ? arquivo : `/img/${arquivo}`;
+    video.muted = true; video.loop = true; video.autoplay = true; video.playsInline = true;
+    slot.insertBefore(video, img);
+    return;
+  }
+  img.src = /^(\/|blob:|https?:)/.test(arquivo) ? arquivo : `/img/${arquivo}`;
+  img.style.objectPosition = posicao;
+  img.hidden = false;
+}
 
 async function carregarCardapio() {
   try {

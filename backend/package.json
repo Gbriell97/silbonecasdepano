@@ -1,7 +1,7 @@
 {
   "name": "cardapio-site",
-  "version": "2.2.1",
-  "description": "Cardápio digital V2.2.1 com correção de login, imagens otimizadas, vídeos de até 30 segundos e favicon dinâmico",
+  "version": "2.3.0",
+  "description": "Cardápio digital V2.3 com capa única, painel administrativo renovado, imagens otimizadas e vídeos de até 30 segundos",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {

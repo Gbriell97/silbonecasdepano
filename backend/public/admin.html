@@ -6,7 +6,7 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="theme-color" content="#1c1712" id="themeColorMeta" />
+<meta name="theme-color" content="#1d4ed8" id="themeColorMeta" />
 <link rel="manifest" href="/manifest-admin.json" />
 <title>Administração do Cardápio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,7 +33,10 @@
 <!-- Painel admin -->
 <div class="admin-panel" id="adminPanel" hidden>
   <header class="admin-header">
-    <h1>Editar cardápio</h1>
+    <div class="admin-brand">
+      <span class="admin-brand-mark">✦</span>
+      <div><p>Painel da loja</p><h1>Editar cardápio</h1></div>
+    </div>
     <div class="admin-header-actions">
       <a href="/" class="btn-link" target="_blank">Ver site</a>
       <button id="btnLogout" class="btn-link">Sair</button>
@@ -98,20 +101,12 @@
     </div>
 
     <div class="loja-field-group">
-      <label>Fotos de capa (até 3)</label>
-      <p class="hint-reenquadrar">💡 Imagem: até 10 MB. Vídeo: MP4/WebM, até 30 segundos e 50 MB.</p>
-      <div class="capas-grid">
+      <label>Imagem ou vídeo de capa</label>
+      <p class="hint-reenquadrar">A capa aparece no topo do site. Imagem: até 10 MB. Vídeo MP4/WebM: até 30 segundos e 50 MB; reproduz automaticamente, sem som e em loop.</p>
+      <div class="capas-grid capa-unica">
         <div class="capa-slot">
           <img id="previewCapa1" class="preview-capa" hidden />
           <input type="file" id="inputCapa1" accept="image/*,video/mp4,video/webm" />
-        </div>
-        <div class="capa-slot">
-          <img id="previewCapa2" class="preview-capa" hidden />
-          <input type="file" id="inputCapa2" accept="image/*,video/mp4,video/webm" />
-        </div>
-        <div class="capa-slot">
-          <img id="previewCapa3" class="preview-capa" hidden />
-          <input type="file" id="inputCapa3" accept="image/*,video/mp4,video/webm" />
         </div>
       </div>
     </div>

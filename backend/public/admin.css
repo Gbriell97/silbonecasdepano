@@ -541,3 +541,91 @@
   .admin-panel { max-width: 1100px; }
   .fotos-galeria { grid-template-columns: repeat(6, 1fr); }
 }
+
+/* ---------- Painel V2.3: interface clara e objetiva ---------- */
+:root {
+  --bg: #f4f7fb;
+  --bg-alt: #edf2f9;
+  --card: #ffffff;
+  --card-border: #dbe4f0;
+  --mustard: #1d4ed8;
+  --red: #dc2626;
+  --cream: #172033;
+  --muted: #66758b;
+  --paper: #ffffff;
+  --paper-ink: #172033;
+}
+
+.admin-body { background: #f4f7fb; color: var(--cream); padding-bottom: 56px; }
+.admin-body::before { content: ""; position: fixed; inset: 0 0 auto; height: 260px; background: linear-gradient(115deg, #0f2e70 0%, #1d4ed8 55%, #3b82f6 100%); z-index: -1; }
+
+.login-screen { padding: 24px; background: radial-gradient(circle at top right, #60a5fa, transparent 35%), #0f2e70; }
+.login-box { max-width: 400px; padding: 36px 32px; border: 0; border-radius: 24px; background: rgba(255,255,255,.97); box-shadow: 0 24px 80px rgba(4,18,53,.35); }
+.login-box h1 { color: #123379; text-transform: none; font-size: 1.75rem; letter-spacing: -.03em; }
+.login-box p { color: #66758b; font-size: .95rem; line-height: 1.5; }
+.login-box input { border-color: #dbe4f0; background: #f8fafc; color: #172033; border-radius: 12px; padding: 13px 14px; }
+.login-box input:focus, .loja-form input:focus, .loja-form textarea:focus, .loja-form select:focus { outline: 3px solid rgba(59,130,246,.18); border-color: #3b82f6; }
+.login-box button { background: #1d4ed8; color: white; border-radius: 12px; padding: 13px; text-transform: none; font-size: .95rem; box-shadow: 0 7px 18px rgba(29,78,216,.22); }
+
+.admin-panel { max-width: 1120px; padding: 0 20px; }
+.admin-header { min-height: 132px; border: 0; margin: 0; padding: 26px 0 34px; color: white; }
+.admin-brand { display: flex; gap: 13px; align-items: center; }
+.admin-brand-mark { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 15px; background: rgba(255,255,255,.16); color: white; font-size: 1.4rem; }
+.admin-brand p { margin: 0 0 2px; color: rgba(255,255,255,.72); font-size: .77rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.admin-header h1 { color: white; font-size: 1.7rem; text-transform: none; letter-spacing: -.04em; }
+.admin-header-actions { gap: 8px; }
+.btn-link { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.25); color: white; border-radius: 10px; padding: 9px 13px; }
+.btn-link:hover { background: rgba(255,255,255,.24); }
+
+.admin-tabs { background: white; border: 1px solid #dbe4f0; border-radius: 16px; padding: 6px; gap: 4px; margin: -18px 0 24px; box-shadow: 0 10px 28px rgba(21,45,86,.09); }
+.admin-tab { flex: 1; border: 0; border-radius: 10px; margin: 0; padding: 11px 12px; color: #66758b; font-size: .82rem; }
+.admin-tab:hover { background: #eff6ff; color: #1d4ed8; }
+.admin-tab.active { color: #1642b2; background: #e8f0ff; border: 0; }
+.admin-tab-panel { animation: adminReveal .18s ease-out; }
+@keyframes adminReveal { from { opacity: .2; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+
+.tab-titulo { color: #172033; text-transform: none; font-size: 1.25rem; letter-spacing: -.02em; }
+.admin-cat-block, .loja-field-group, .loja-form, .depoimentos-admin-lista, .visitas-cards, #listaPedidos { background: white; }
+.admin-cat-block { border: 1px solid #dbe4f0; border-radius: 16px; padding: 18px; margin-bottom: 16px; box-shadow: 0 3px 12px rgba(19,45,91,.04); }
+.admin-cat-title h2 { color: #172033; text-transform: none; font-size: 1.1rem; }
+.admin-product-row, .pedido-card, .depoimento-admin-card, .visita-card { background: #fff; border-color: #dbe4f0; box-shadow: none; }
+.admin-product-row { border-radius: 12px; transition: transform .15s, box-shadow .15s; }
+.admin-product-row:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(19,45,91,.08); }
+.admin-product-info span, .pedido-card .pedido-meta, .depoimento-admin-info p { color: #66758b; }
+.btn-mini { color: #3d5270; border-color: #dbe4f0; border-radius: 8px; }
+.btn-mini:hover { border-color: #3b82f6; color: #1d4ed8; background: #eff6ff; }
+.btn-nova-categoria { border-color: #93b5ed; color: #1d4ed8; background: #f8fbff; border-radius: 12px; text-transform: none; font-size: .9rem; }
+.btn-nova-categoria:hover { background: #e8f0ff; }
+
+.loja-field-group { border: 1px solid #dbe4f0; border-radius: 16px; padding: 18px; margin-bottom: 16px; }
+.loja-field-group > label, .loja-form label { color: #52637b; }
+.capas-grid.capa-unica { display: block; max-width: 580px; }
+.capa-slot { gap: 10px; }
+.preview-capa { aspect-ratio: 16 / 7; border-radius: 14px; border-color: #dbe4f0; background: #edf2f9; cursor: crosshair; }
+.capa-slot input[type="file"] { color: #52637b; font-size: .8rem; }
+.loja-form { border: 1px solid #dbe4f0; border-radius: 16px; padding: 20px; gap: 16px; }
+.loja-form input[type="text"], .loja-form textarea, .loja-form select, .horario-item input[type="time"] { background: #f8fafc; border-color: #dbe4f0; color: #172033; border-radius: 10px; padding: 10px 11px; }
+.horarios-block { border-color: #dbe4f0; }
+.horario-item span { color: #334155; }
+.visitas-cards { background: transparent; gap: 12px; }
+.visita-card { border-radius: 14px; padding: 18px 10px; }
+.visita-numero { color: #1d4ed8; font-family: var(--display); }
+.visita-label { color: #66758b; }
+
+.modal-backdrop { background: rgba(15,31,61,.52); backdrop-filter: blur(3px); }
+.modal-box { border-radius: 18px; box-shadow: 0 20px 60px rgba(15,31,61,.25); }
+.btn-primario { background: #1d4ed8; color: white; }
+.btn-secundario { background: #e8eef8; color: #28405f; }
+
+@media (max-width: 620px) {
+  .admin-panel { padding: 0 12px; }
+  .admin-header { min-height: 118px; padding-top: 20px; align-items: flex-start; }
+  .admin-brand-mark { display: none; }
+  .admin-header h1 { font-size: 1.35rem; }
+  .admin-header-actions { flex-direction: column; }
+  .btn-link { padding: 6px 9px; font-size: .7rem; }
+  .admin-tabs { overflow-x: auto; border-radius: 14px; }
+  .admin-tab { flex: 0 0 auto; }
+  .admin-cat-block, .loja-field-group, .loja-form { padding: 14px; }
+  .horario-item { grid-template-columns: 70px auto 1fr 1fr; gap: 5px; }
+}

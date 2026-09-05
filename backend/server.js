@@ -53,7 +53,7 @@ app.use(cors({
 }));
 app.use(express.json({ limit: "100kb" }));
 
-app.get("/api/health", (req, res) => res.json({ ok: true, version: "2.2.1" }));
+app.get("/api/health", (req, res) => res.json({ ok: true, version: "2.3.0" }));
 
 // -------------------- Segurança / sessão --------------------
 const sessoes = new Map();
@@ -478,7 +478,9 @@ app.get("/api/loja", (req, res) => {
     nome: c.nome,
     tagline: c.tagline,
     logo: c.logo,
-    capas: [{ arquivo: c.capa1, posicao: c.capa1_pos, tipo: c.capa1_tipo || "image" }, { arquivo: c.capa2, posicao: c.capa2_pos, tipo: c.capa2_tipo || "image" }, { arquivo: c.capa3, posicao: c.capa3_pos, tipo: c.capa3_tipo || "image" }].filter((x) => x.arquivo),
+    // A vitrine usa uma única mídia: imagem ou vídeo. As colunas antigas
+    // capa2/capa3 permanecem no banco apenas para não quebrar instalações já existentes.
+    capa: c.capa1 ? { arquivo: c.capa1, posicao: c.capa1_pos, tipo: c.capa1_tipo || "image" } : null,
     corPrimaria: c.cor_primaria,
     endereco: c.endereco,
     textoEntrega: c.texto_entrega,
@@ -712,7 +714,7 @@ app.put("/api/admin/loja", checarSessaoAdmin, (req, res) => {
 });
 
 app.post("/api/admin/loja/imagem/:campo", checarSessaoAdmin, (req, res, next) => {
-  if (!["logo", "capa1", "capa2", "capa3"].includes(req.params.campo)) return res.status(400).json({ erro: "Campo inválido." });
+  if (!["logo", "capa1"].includes(req.params.campo)) return res.status(400).json({ erro: "Campo inválido." });
   if (req.params.campo === "logo") return uploadLoja.single("imagem")(req, res, (err) => err ? next(err) : otimizarImagemUpload(req, res, next));
   return uploadMidia.single("imagem")(req, res, (err) => err ? next(err) : processarUploadMidia(req, res, next));
 }, (req, res) => {
@@ -731,7 +733,7 @@ app.post("/api/admin/loja/imagem/:campo", checarSessaoAdmin, (req, res, next) =>
   res.json({ ok: true, imagem: req.file.filename, tipo, duracao: req.file.duration || null });
 });
 app.put("/api/admin/loja/posicao/:campo", checarSessaoAdmin, (req, res) => {
-  if (!["capa1", "capa2", "capa3"].includes(req.params.campo)) return res.status(400).json({ erro: "Campo inválido." });
+  if (req.params.campo !== "capa1") return res.status(400).json({ erro: "Campo inválido." });
   const posicao = texto(req.body?.posicao, 50);
   if (!posicao || !/^\s*\d{1,3}%\s+\d{1,3}%\s*$/.test(posicao)) return res.status(400).json({ erro: "Posição inválida." });
   db.prepare(`UPDATE loja_config SET ${req.params.campo}_pos=? WHERE id=1`).run(posicao);
@@ -786,4 +788,4 @@ app.use((err, req, res, next) => {
   res.status(500).json({ erro: "Erro interno do servidor." });
 });
 
-app.listen(PORT, () => console.log(`Backend V2.2.1 rodando em http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Backend V2.3 rodando em http://localhost:${PORT}`));

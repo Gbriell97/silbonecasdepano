@@ -98,12 +98,12 @@ if ("serviceWorker" in navigator) {
 
 function renderCapa(loja) {
   const cover = document.getElementById("cover");
-  if (loja.capas && loja.capas.length) {
-    cover.innerHTML = loja.capas
-      .map((c) => c.tipo === "video"
-        ? `<video src="/img/${c.arquivo}" autoplay muted loop playsinline preload="metadata"></video>`
-        : `<img src="/img/${c.arquivo}" style="object-position: ${c.posicao || "50% 50%"}" onerror="this.remove()" />`)
-      .join("");
+  const capa = loja.capa;
+  if (capa) {
+    // Vídeo de capa é puramente visual: inicia sem som, em loop e sem controles.
+    cover.innerHTML = capa.tipo === "video"
+      ? `<video src="/img/${capa.arquivo}" autoplay muted loop playsinline preload="metadata" aria-label="Vídeo de capa"></video>`
+      : `<img src="/img/${capa.arquivo}" style="object-position: ${capa.posicao || "50% 50%"}" alt="Capa da loja" onerror="this.remove()" />`;
   } else {
     cover.innerHTML = `<div class="cover-placeholder">📷</div>`;
   }
