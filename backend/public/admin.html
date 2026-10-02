@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#1d4ed8" id="themeColorMeta" />
+<link rel="manifest" href="/manifest-admin.json" />
+<title>Administração do Cardápio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Karla:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="admin.css" />
+</head>
+<body class="admin-body">
+
+<!-- Tela de login -->
+<div class="login-screen" id="loginScreen">
+  <form class="login-box" id="loginForm">
+    <h1>Área administrativa</h1>
+    <p>Digite a senha para editar o cardápio</p>
+    <input type="password" id="senhaInput" placeholder="Senha" required />
+    <button type="submit">Entrar</button>
+    <p class="login-erro" id="loginErro"></p>
+  </form>
+</div>
+
+<!-- Painel admin -->
+<div class="admin-panel" id="adminPanel" hidden>
+  <header class="admin-header">
+    <div class="admin-brand">
+      <span class="admin-brand-mark">✦</span>
+      <div><p>Painel da loja</p><h1>Editar cardápio</h1></div>
+    </div>
+    <div class="admin-header-actions">
+      <a href="/" class="btn-link" target="_blank">Ver site</a>
+      <button id="btnLogout" class="btn-link">Sair</button>
+    </div>
+  </header>
+
+  <nav class="admin-tabs" id="adminTabs">
+    <button type="button" class="admin-tab active" data-tab="cardapio">🍽️ Cardápio</button>
+    <button type="button" class="admin-tab" data-tab="pedidos">🧾 Pedidos</button>
+    <button type="button" class="admin-tab" data-tab="depoimentos">📸 Depoimentos</button>
+    <button type="button" class="admin-tab" data-tab="aparencia">🎨 Aparência</button>
+  </nav>
+
+  <!-- Aba: Cardápio -->
+  <section class="admin-tab-panel" id="painelCardapio">
+    <div class="admin-content" id="adminContent">
+      <p class="loading">Carregando...</p>
+    </div>
+    <button id="btnNovaCategoria" class="btn-nova-categoria">+ Nova categoria</button>
+  </section>
+
+  <!-- Aba: Pedidos -->
+  <section class="admin-tab-panel" id="painelPedidos" hidden>
+    <h2 class="tab-titulo">Visitas ao site</h2>
+    <div class="visitas-cards" id="visitasCards">
+      <p class="loading">Carregando...</p>
+    </div>
+
+    <h2 class="tab-titulo" style="margin-top: 24px;">Últimos pedidos</h2>
+    <div id="listaPedidos"><p class="loading">Carregando pedidos...</p></div>
+  </section>
+
+  <!-- Aba: Depoimentos -->
+  <section class="admin-tab-panel" id="painelDepoimentos" hidden>
+    <h2 class="tab-titulo">Galeria de trabalhos e depoimentos</h2>
+    <p class="hint-reenquadrar">💡 Adicione uma foto ou vídeo de até 30 segundos. O conteúdo aparece no site antes do cardápio.</p>
+
+    <div class="depoimentos-admin-lista" id="depoimentosAdminLista"></div>
+
+    <form id="formNovoDepoimento" class="loja-form" style="margin-top: 16px;">
+      <label>Nome do cliente
+        <input type="text" id="depoNomeCliente" placeholder="Ex: Maria S." required />
+      </label>
+      <label>Depoimento (opcional)
+        <textarea id="depoTexto" rows="2" placeholder="O que o cliente disse sobre o trabalho"></textarea>
+      </label>
+      <button type="submit" class="btn-primario">+ Adicionar depoimento</button>
+    </form>
+  </section>
+
+  <!-- Aba: Aparência -->
+  <section class="admin-tab-panel" id="painelAparencia" hidden>
+    <h2 class="tab-titulo">Aparência da loja</h2>
+
+    <div class="loja-field-group">
+      <label>Logomarca</label>
+      <div class="upload-row">
+        <img id="previewLogo" class="preview-circular" hidden />
+        <div id="previewLogoFallback" class="preview-circular preview-placeholder">🍴</div>
+        <input type="file" id="inputLogo" accept="image/*" />
+      </div>
+    </div>
+
+    <div class="loja-field-group">
+      <label>Imagem ou vídeo de capa</label>
+      <p class="hint-reenquadrar">A capa aparece no topo do site. Imagem: até 10 MB. Vídeo MP4/WebM: até 30 segundos e 50 MB; reproduz automaticamente, sem som e em loop.</p>
+      <div class="capas-grid capa-unica">
+        <div class="capa-slot">
+          <img id="previewCapa1" class="preview-capa" hidden />
+          <input type="file" id="inputCapa1" accept="image/*,video/mp4,video/webm" />
+        </div>
+      </div>
+    </div>
+
+    <form id="formLoja" class="loja-form">
+      <label>Nome da loja
+        <input type="text" id="lojaNome" required />
+      </label>
+      <label>Frase de efeito (subtítulo)
+        <input type="text" id="lojaTagline" placeholder="Ex: Comida boa, feita com carinho" />
+      </label>
+      <label>Endereço
+        <input type="text" id="lojaEndereco" placeholder="Rua, número, bairro, cidade" />
+      </label>
+      <label>Texto de entrega
+        <input type="text" id="lojaEntrega" placeholder="Ex: Entrega em até 40 min" />
+      </label>
+      <label>Instagram
+        <input type="text" id="lojaInstagram" placeholder="@seu_usuario ou link do perfil" />
+      </label>
+      <label>Cor principal do site
+        <input type="color" id="lojaCor" value="#2f6b3a" />
+      </label>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="lojaSempreAberto" />
+        Ignorar horário (loja sempre aparece como aberta)
+      </label>
+
+      <div id="horariosBlock" class="horarios-block">
+        <label class="horarios-title">Horário de funcionamento</label>
+        <div id="horariosLista"></div>
+      </div>
+
+      <button type="submit" class="btn-primario">Salvar aparência</button>
+    </form>
+  </section>
+</div>
+
+<!-- Modal de categoria (nome + ícone) -->
+<div class="modal" id="modalCategoria" hidden>
+  <div class="modal-backdrop" id="modalCategoriaBackdrop"></div>
+  <form class="modal-box" id="formCategoria">
+    <h2 id="modalCategoriaTitulo">Nova categoria</h2>
+
+    <label>Nome
+      <input type="text" id="categoriaNome" required />
+    </label>
+
+    <label>Ícone
+      <input type="text" id="categoriaIcone" maxlength="4" placeholder="Ex: 🍔" />
+    </label>
+
+    <div class="emoji-sugestoes" id="emojiSugestoes"></div>
+
+    <div class="modal-actions">
+      <button type="button" id="btnCancelarCategoria" class="btn-secundario">Cancelar</button>
+      <button type="submit" class="btn-primario">Salvar</button>
+    </div>
+  </form>
+</div>
+
+<!-- Modal editar/criar produto -->
+<div class="modal" id="modalProduto" hidden>
+  <div class="modal-backdrop" id="modalBackdrop"></div>
+  <form class="modal-box" id="formProduto">
+    <h2 id="modalTitulo">Editar item</h2>
+
+    <label>Nome
+      <input type="text" id="campoNome" required />
+    </label>
+    <label>Descrição
+      <textarea id="campoDescricao" rows="2"></textarea>
+    </label>
+    <label>Preço (R$)
+      <input type="number" id="campoPreco" step="0.01" min="0" required />
+    </label>
+    <label>Categoria
+      <select id="campoCategoria" required></select>
+    </label>
+    <label class="checkbox-label">
+      <input type="checkbox" id="campoDisponivel" checked />
+      Disponível no cardápio
+    </label>
+
+    <label>Tipo de entrega
+      <select id="campoTipoEntrega">
+        <option value="pronta">Pronta entrega</option>
+        <option value="encomenda">Sob encomenda</option>
+      </select>
+    </label>
+    <label id="campoPrazoWrapper" hidden>Prazo de produção
+      <input type="text" id="campoPrazo" placeholder="Ex: 15 dias úteis" />
+    </label>
+
+    <label>Fotos do produto</label>
+    <p class="hint-reenquadrar">💡 Você pode adicionar quantas fotos quiser. A primeira é a foto de capa.</p>
+    <div class="fotos-galeria" id="fotosGaleria"></div>
+    <button type="button" id="btnAddFoto" class="btn-nova-categoria" style="margin: 0;">+ Adicionar foto</button>
+    <p class="hint-reenquadrar" id="hintSalveAntes" hidden>💡 Salve o item uma vez pra poder adicionar fotos</p>
+    <input type="file" id="inputNovaFoto" accept="image/*" hidden />
+
+    <div class="modal-actions">
+      <button type="button" id="btnCancelar" class="btn-secundario">Cancelar</button>
+      <button type="submit" class="btn-primario">Salvar</button>
+    </div>
+  </form>
+</div>
+
+<!-- Modal de recorte de imagem -->
+<div class="modal" id="modalCrop" hidden>
+  <div class="modal-backdrop" id="cropBackdrop"></div>
+  <div class="modal-box crop-box">
+    <h2>Ajustar foto</h2>
+
+    <div class="crop-formatos" id="cropFormatos">
+      <button type="button" class="formato-chip" data-ratio="livre">Livre</button>
+      <button type="button" class="formato-chip" data-ratio="1">Quadrado</button>
+      <button type="button" class="formato-chip" data-ratio="0.8">Retrato</button>
+      <button type="button" class="formato-chip" data-ratio="0.5625">Retrato alto</button>
+      <button type="button" class="formato-chip" data-ratio="1.3333">Paisagem</button>
+      <button type="button" class="formato-chip" data-ratio="1.7778">Paisagem larga</button>
+    </div>
+
+    <div class="crop-container">
+      <img id="cropImage" />
+    </div>
+    <div class="modal-actions">
+      <button type="button" id="btnCropCancelar" class="btn-secundario">Cancelar</button>
+      <button type="button" id="btnCropConfirmar" class="btn-primario">Usar essa foto</button>
+    </div>
+  </div>
+</div>
+
+<script src="admin.js"></script>
+</body>
+</html>

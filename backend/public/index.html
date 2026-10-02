@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#2f6b3a" id="themeColorMeta" />
+<link rel="manifest" href="/manifest.json" />
+<link rel="icon" type="image/png" href="%%FAVICON%%" />
+<link rel="apple-touch-icon" href="%%FAVICON%%" />
+<title>%%OG_TITLE%%</title>
+
+<!-- SEO: ajuda o Google a entender e indexar a página -->
+<meta name="description" content="%%OG_DESCRICAO%%" />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="%%OG_URL%%" />
+<script type="application/ld+json">%%JSON_LD%%</script>
+%%GOOGLE_VERIFICATION%%
+
+<!-- Prévia do link (WhatsApp, Instagram, Facebook, etc.) -->
+<meta property="og:title" content="%%OG_TITLE%%" />
+<meta property="og:description" content="%%OG_DESCRICAO%%" />
+<meta property="og:image" content="%%OG_IMAGEM%%" />
+<meta property="og:url" content="%%OG_URL%%" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="%%OG_TITLE%%" />
+<meta name="twitter:description" content="%%OG_DESCRICAO%%" />
+<meta name="twitter:image" content="%%OG_IMAGEM%%" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Karla:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- Capa única: imagem ou vídeo -->
+<div class="cover" id="cover"></div>
+
+<!-- Cartão de identidade da loja -->
+<div class="store-card">
+  <img class="store-logo" id="storeLogo" src="" alt="" hidden />
+  <div class="store-logo-fallback" id="storeLogoFallback">🍴</div>
+  <div class="store-info">
+    <h1 id="storeName">Carregando...</h1>
+    <p id="storeTagline"></p>
+  </div>
+  <div class="store-status">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText">—</span>
+    <span class="store-delivery" id="storeDelivery"></span>
+  </div>
+</div>
+
+<!-- Redes sociais -->
+<div class="social-row" id="socialRow" hidden>
+  <a href="#" id="socialInsta" class="social-btn" target="_blank" rel="noopener" hidden>
+    <svg class="icon-social" viewBox="0 0 24 24" aria-hidden="true">
+      <defs>
+        <linearGradient id="igGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#FFDD55"/>
+          <stop offset="35%" stop-color="#FF543E"/>
+          <stop offset="70%" stop-color="#C837AB"/>
+          <stop offset="100%" stop-color="#7048E8"/>
+        </linearGradient>
+      </defs>
+      <rect x="1" y="1" width="22" height="22" rx="6" fill="url(#igGrad)"/>
+      <circle cx="12" cy="12" r="5" fill="none" stroke="#fff" stroke-width="1.6"/>
+      <circle cx="17.4" cy="6.6" r="1.15" fill="#fff"/>
+    </svg>
+    Seguir no Instagram
+  </a>
+</div>
+
+<!-- Ações rápidas -->
+<div class="quick-actions">
+  <button class="quick-btn" id="btnRepetir">
+    <span class="quick-icon">🔁</span> Peça de novo
+  </button>
+  <button class="quick-btn cart" id="cartToggle">
+    <span class="quick-icon">🧾</span> Carrinho
+    <span class="cart-count" id="cartCount" hidden>0</span>
+  </button>
+</div>
+
+<!-- Busca -->
+<div class="search-bar">
+  <span class="search-icon">🔎</span>
+  <input type="text" id="searchInput" placeholder="Pesquisar produto..." />
+</div>
+
+<!-- Depoimentos / Galeria de trabalhos -->
+<section class="depoimentos" id="depoimentosSection" hidden>
+  <h2 class="depoimentos-titulo">💬 Quem já comprou aprovou</h2>
+  <div class="depoimentos-scroll" id="depoimentosLista"></div>
+</section>
+
+<!-- Categorias com ícones -->
+<nav class="cat-grid" id="catNav"></nav>
+
+<main class="menu" id="menu">
+  <p class="loading">Carregando cardápio…</p>
+</main>
+
+<!-- Comanda / Carrinho -->
+<aside class="ticket" id="ticket" aria-hidden="true">
+  <div class="ticket-backdrop" id="ticketBackdrop"></div>
+  <div class="ticket-panel">
+    <div class="ticket-head">
+      <span>COMANDA</span>
+      <button id="closeTicket" class="ticket-close" aria-label="Fechar">✕</button>
+    </div>
+
+    <div class="ticket-items" id="ticketItems">
+      <p class="ticket-empty">Sua comanda está vazia.<br>Adicione itens do cardápio.</p>
+    </div>
+
+    <div class="ticket-total-row">
+      <span>TOTAL</span>
+      <span id="ticketTotal">R$ 0,00</span>
+    </div>
+
+    <form id="checkoutForm" class="checkout-form">
+      <label>
+        Nome
+        <input type="text" id="clienteNome" required placeholder="Seu nome" />
+      </label>
+      <label>
+        WhatsApp
+        <input type="tel" id="clienteTelefone" required placeholder="(11) 99999-9999" />
+      </label>
+      <label>
+        Endereço para entrega (opcional)
+        <input type="text" id="clienteEndereco" placeholder="Rua, número, bairro" />
+      </label>
+      <label>
+        Forma de pagamento
+        <select id="formaPagamento">
+          <option value="Dinheiro">Dinheiro na entrega</option>
+          <option value="Cartão na entrega">Cartão na entrega</option>
+          <option value="Pix">Pix</option>
+          <option value="Pagamento online">Pagamento online</option>
+        </select>
+      </label>
+
+      <button type="submit" class="btn-confirm" id="btnConfirm">Enviar pedido pelo WhatsApp</button>
+    </form>
+
+    <p class="ticket-footnote">Ao confirmar, seu pedido será enviado direto no WhatsApp da loja.</p>
+  </div>
+</aside>
+
+<!-- Modal de informações -->
+<div class="modal" id="modalInfo" hidden>
+  <div class="modal-backdrop" id="infoBackdrop"></div>
+  <div class="modal-box">
+    <h2>Informações</h2>
+    <p id="infoTagline"></p>
+    <p id="infoEndereco"></p>
+    <p id="infoEntrega"></p>
+    <h3>Horário de funcionamento</h3>
+    <div id="infoHorarios"></div>
+    <button class="btn-confirm btn-compartilhar" id="btnCompartilharLoja">📤 Compartilhar este cardápio</button>
+    <button class="btn-confirm" id="btnFecharInfo">Fechar</button>
+  </div>
+</div>
+
+<!-- Zoom da foto do produto -->
+<div class="modal photo-modal" id="modalFoto" hidden>
+  <div class="modal-backdrop" id="fotoBackdrop"></div>
+  <div class="photo-modal-box">
+    <button class="photo-modal-close" id="fecharFoto">✕</button>
+    <img id="fotoAmpliada" src="" alt="" />
+    <div class="foto-nav" id="fotoNav" hidden>
+      <button type="button" id="fotoAnterior" class="foto-nav-btn">‹</button>
+      <button type="button" id="fotoProxima" class="foto-nav-btn">›</button>
+    </div>
+    <span class="foto-contador" id="fotoContador"></span>
+  </div>
+</div>
+
+<!-- Detalhe do produto -->
+<div class="modal" id="modalProdutoDetalhe" hidden>
+  <div class="modal-backdrop" id="detalheBackdrop"></div>
+  <div class="modal-box detalhe-box">
+    <button class="photo-modal-close detalhe-close" id="fecharDetalhe">✕</button>
+
+    <div class="detalhe-thumb" id="detalheThumb">
+      <span id="detalheEmoji"></span>
+      <img id="detalheImg" class="thumb-img" hidden />
+      <div class="foto-nav" id="detalheFotoNav" hidden>
+        <button type="button" id="detalheFotoAnterior" class="foto-nav-btn">‹</button>
+        <button type="button" id="detalheFotoProxima" class="foto-nav-btn">›</button>
+      </div>
+      <span class="foto-contador-inline" id="detalheFotoContador"></span>
+    </div>
+
+    <div class="detalhe-conteudo">
+      <span id="detalheSelo"></span>
+      <h2 id="detalheNome"></h2>
+      <p id="detalheDescricao"></p>
+      <div class="detalhe-preco-linha">
+        <span class="product-price" id="detalhePreco"></span>
+        <div class="detalhe-preco-acoes">
+          <button class="fav-btn-detalhe" id="btnFavoritarDetalhe" aria-label="Favoritar">🤍</button>
+          <button class="btn-compartilhar-mini" id="btnCompartilharProduto">📤 Compartilhar</button>
+        </div>
+      </div>
+      <div class="detalhe-acoes">
+        <div class="qty-controls" id="detalheQtyControls"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Botão flutuante do WhatsApp -->
+<a href="#" id="whatsappFloat" class="whatsapp-float" target="_blank" rel="noopener" hidden aria-label="Falar no WhatsApp">
+  <svg class="icon-whats" viewBox="0 0 24 24" aria-hidden="true" fill="#fff">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+    <path d="M12.001 2.001C6.478 2.001 2 6.479 2 12.001c0 1.987.583 3.816 1.598 5.362L2 22l4.798-1.573A9.936 9.936 0 0012.001 22c5.523 0 10.001-4.478 10.001-9.999C22.002 6.479 17.524 2.001 12.001 2.001zm0 18.176a8.13 8.13 0 01-4.146-1.135l-.297-.176-3.093.826.826-3.017-.194-.31A8.13 8.13 0 013.837 12.02c0-4.49 3.653-8.143 8.16-8.143 4.49 0 8.143 3.653 8.143 8.143 0 4.507-3.653 8.157-8.14 8.157z"/>
+  </svg>
+</a>
+
+<!-- Barra de navegação inferior -->
+<nav class="bottom-nav">
+  <button class="bottom-item active" data-nav="catalogo">
+    <span>📖</span> Catálogo
+  </button>
+  <button class="bottom-item" data-nav="favoritos">
+    <span>🤍</span> Favoritos
+  </button>
+  <button class="bottom-item" data-nav="carrinho">
+    <span>🧾</span> Carrinho
+  </button>
+  <button class="bottom-item" data-nav="info">
+    <span>ℹ️</span> Info
+  </button>
+</nav>
+
+<script src="app.js"></script>
+</body>
+</html>
